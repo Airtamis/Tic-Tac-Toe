@@ -3,6 +3,8 @@
 ; Plays ye old guessing game with the user
 ; nasm -f elf32 TTT.asm && gcc -m32 TTT.o -o TTT
 
+; comment
+
 %define SYS_EXIT 1
 %define SYS_READ 3
 %define SYS_WRITE 4
