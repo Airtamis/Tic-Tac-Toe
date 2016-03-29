@@ -3,8 +3,6 @@
 ; Plays ye old guessing game with the user
 ; nasm -f elf32 TTT.asm && gcc -m32 TTT.o -o TTT
 
-; comment
-
 %define SYS_EXIT 1
 %define SYS_READ 3
 %define SYS_WRITE 4
@@ -39,6 +37,10 @@ SECTION .data
 	O:		db "O", 0		; Y
 	E:		db " ", 0		; Space
 	badSpot:	db "Space already occupied", 10, 0 ; User chose occupied spot in board
+	newline:	db 10, 0		; newline character
+	tieWin:		db "Tie game!", 10, 0	; Tie Game Message
+	compWin:	db "The Computer Won, of course!", 10, 0 ; Computer Win Message
+	playWin:	db "Crap, the player won...", 10, 0	; Player win message
 
 SECTION .text
 	global main
@@ -49,17 +51,6 @@ SECTION .text
 
 main:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN main
 	;jmp exit
-	
-	push white		; push white background escape character to stack
-	push f_str		; push string format for printf to stack
-	call printf		; change background to white color
-	add ESP, 8		; adjust stack pointer
-
-	push black		; push black foreground escape character to stack
-	push f_str		; push string format for printf to stack
-	call printf		; change foreground to black color
-	add ESP, 8 		; adjust stack pointer
-
 	
 	call printBoard 	; print original empty board
 	call getInput		; get user input for move placement
@@ -119,6 +110,14 @@ setSpot:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN setSpot
 
 printBoard:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN printBoard
 
+	push white
+	call printf
+	add ESP, 4
+
+	push black
+	call printf
+	add ESP, 4	
+
 	xor ECX, ECX		; set ECX to 0
 .top:	
 	cmp ECX, 10		; check if ECX is finished iterating over array
@@ -156,10 +155,85 @@ printBoard:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN printBoard
 .bottom:
 	pop ECX			; retrieve current iteration counter from stack
 	inc ECX			; increment counter
+	
+	cmp ECX, 3		; If ECX is 3
+	je .new			; Print a newline
+	cmp ECX, 6		; If ECX is 6
+	je .new			; print a newline
+	cmp ECX, 9		; IF ECX is 9
+	je .new			; Print a newline
+
 	jmp .top		; loop to top
+.new:
+	push ECX		; Save ECX
+
+	push newline		; Push newline charater
+	call printf		; Call printf
+	add ESP, 4		; Adjust stack
+
+	pop ECX			; Get ECX back
+	jmp .top
+
+.end:
+	push reset		; Return keyboard to normal
+	call printf		; Call printf
+	add ESP, 4		; Adjust stack pointer
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END printBoard
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; EAX = 0 if no win, 1 if computer win, 2 if player win, 3 if tie
+calcWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Begin calcWin
+	;; Board looks like:
+	;; 0, 1, 2
+	;; 3, 4, 5
+	;; 6, 7, 8
+
+	call checkXWin
+	cmp EAX, 1		; If X won, EAX will be 1
+	je .XWin
+	call checkOWin
+	cmp EAX, 1		; If O won, EAX will be 2
+	je .OWin
+	call checkTie
+	cmp EAX, 1
+	je .tie
+	jmp .noWin
+	 
+.XWin:
+
+.OWin:
+	mov playSmb
+
+.tie:
+	push tie
+	call printf
+	add ESP, 4
+	
+	mov EAX, 3		; Return 3
+	jmp .end
+
+.noWin:
+	xor EAX, EAX
+	jmp .end
 
 .end:	ret
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END printBoard
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END calcWin
+
+checkXWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkXWin
+
+.end:	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END checkXWin
+
+checkOWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkOWin
+
+.end:	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END checkOWin
+
+checkTie:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkTie
+
+.end:	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END checkTie
 
 exit:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN exit
 	push norm		; push normal character set escape character to stack
