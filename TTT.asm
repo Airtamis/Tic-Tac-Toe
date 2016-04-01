@@ -59,6 +59,10 @@ main:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN main
 	call printf
 	add ESP, 4
 
+	push black
+	call printf
+	add ESP, 4
+
 	call choosePlayers	; choose which player goes first (also sets random seed for program)
 
 mainloop:
