@@ -18,6 +18,7 @@ SECTION .bss
 	input:		resd 1
 	playSymb:	resd 1
 	compSymb:	resd 1
+	currentSymb:	resd 1
 
 SECTION .data
 	m_badBounds:	db "ERROR: Invalid space", 10, 0 ;user chose a space that is not 1-9
@@ -507,7 +508,6 @@ switchPlayers:;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN switchPlayers
 	
 	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END switchPlayers
->>>>>>> master
 
 exit:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN exit
 	push norm		; push normal character set escape character to stack
