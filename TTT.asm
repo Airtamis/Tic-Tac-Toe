@@ -15,9 +15,10 @@
 %define O_VAL 2
 
 SECTION .bss
-	input:		resd 1			; User inputed space
-	playSymb:	resd 1			; The Player's symbol
-	compSymb:	resd 1			; The Computer's symbol
+	input:		resd 1
+	playSymb:	resd 1
+	compSymb:	resd 1
+	currentSymb:	resd 1
 
 SECTION .data
 	m_badBounds:	db "ERROR: Invalid space", 10, 0 ;user chose a space that is not 1-9
@@ -40,9 +41,9 @@ SECTION .data
 	m_tieWin:	db "Tie game!", 10, 0	; Tie Game Message
 	m_compWin:	db "The Computer Won, of course!", 10, 0 ; Computer Win Message
 	m_playWin:	db "Crap, the player won...", 10, 0	; Player win message
-	m_here:		db "HERE", 10, 0
-	m_promptIn:	db "Please enter a space to play", 10, 0	; Prompt Input Message
-	currentSymb:	dd X_VAL		; Current playing symbol
+	m_here:		db "HERE\n", 0
+	m_computer:	db "Computer's Turn", 0	; test message
+	m_player:	db "Player's Turn", 0	; test message
 
 SECTION .text
 	global main
@@ -55,17 +56,17 @@ SECTION .text
 main:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN main
 	;jmp exit
 
-	push white		; Set the foreground to white
+	push white
 	call printf
 	add ESP, 4
 
-	push black		; Set text to black
+	push black
 	call printf
 	add ESP, 4
 
 	call choosePlayers	; choose which player goes first (also sets random seed for program)
 
-pvailoop:			; Player versus AI loop
+mainloop:
 	call printBoard		; print original empty board
 
 .gameloop:
@@ -76,10 +77,18 @@ pvailoop:			; Player versus AI loop
 	jmp .computer
 
 .player:
+	push m_player
+	call printf
+	add ESP, 4
+
 	call getInput		; get user input for move placement
 	jmp .bottom
 
 .computer:
+	push m_computer
+	call printf
+	add ESP, 4
+
 	;currently the same as .player since no placement algorithm
 	call getInput		; get user input for move placement
 	jmp .bottom
@@ -87,87 +96,15 @@ pvailoop:			; Player versus AI loop
 .bottom:
 	call printBoard
 	call switchTurn		; switch currentSymb to O's
-	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
-	cmp EAX, 0		; if game is still going, 
-	je .gameloop		; continue game loop
-	jmp exit		; For now, exit	
-
-	;call endgame		; something to update scores, reset board, etc.
-	;call playAgain		; maybe? return value of 0 to continue? else to quit?
-	call switchPlayers	; switch players' symbols
-	jmp pvailoop		; start new game
-
-.exit:
-	;call printScores	; a method to print final scores before exiting entirely
-	jmp exit		; exit program
-
-aivailoop:			; AI versus AI game
-	call printBoard		; print original empty board
-
-.gameloop:
-	mov EAX, [currentSymb]	;put current symbol in EAX
-	mov EBX, [playSymb]	;put player's symbol in EBX
-	cmp EAX, EBX		;check if player's turn or computer's turn
-	je  .player
-	jmp .computer
-
-.player:
-	call getInput		; get user input for move placement
-	jmp .bottom
-
-.computer:
-	;currently the same as .player since no placement algorithm
-	call getInput		; get user input for move placement
-	jmp .bottom
+	;call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
+	;cmp EAX, 0		; if game is still going, 
+	;(not sure if Jeremy has already implemented a system for catching return value)
+	jmp .gameloop		; continue game loop
 	
-.bottom:
-	call printBoard
-	call switchTurn		; switch currentSymb to O's
-	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
-	cmp EAX, 0		; if game is still going, 
-	je .gameloop		; continue game loop
-	jmp exit		; For now, exit	
-
 	;call endgame		; something to update scores, reset board, etc.
 	;call playAgain		; maybe? return value of 0 to continue? else to quit?
 	call switchPlayers	; switch players' symbols
-	jmp aivailoop		; start new game
-
-.exit:
-	;call printScores	; a method to print final scores before exiting entirely
-	jmp exit		; exit program
-
-pvploop:			; Player versus player game
-	call printBoard		; print original empty board
-
-.gameloop:
-	mov EAX, [currentSymb]	;put current symbol in EAX
-	mov EBX, [playSymb]	;put player's symbol in EBX
-	cmp EAX, EBX		;check if player's turn or computer's turn
-	je  .player
-	jmp .computer
-
-.player:
-	call getInput		; get user input for move placement
-	jmp .bottom
-
-.computer:
-	;currently the same as .player since no placement algorithm
-	call getInput		; get user input for move placement
-	jmp .bottom
-	
-.bottom:
-	call printBoard
-	call switchTurn		; switch currentSymb to O's
-	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
-	cmp EAX, 0		; if game is still going, 
-	je .gameloop		; continue game loop
-	jmp exit		; For now, exit	
-
-	;call endgame		; something to update scores, reset board, etc.
-	;call playAgain		; maybe? return value of 0 to continue? else to quit?
-	call switchPlayers	; switch players' symbols
-	jmp pvploop		; start new game
+	jmp mainloop		; start new game
 
 .exit:
 	;call printScores	; a method to print final scores before exiting entirely
@@ -175,10 +112,6 @@ pvploop:			; Player versus player game
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END main
 
 getInput:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getInput
-	push m_promptIn		; Push message to prompt input
-	call printf		; Print the message
-	add ESP, 4		; Adjust stack pointer
-
 	push input		; push variable to store input to stack
 	push f_int		; push format string for getting integer input
 	call scanf		; get user's inputted move
@@ -187,21 +120,19 @@ getInput:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getInput
 	mov EAX, [input]	; move user's inputted number into EAX
 
 	cmp EAX, 1		; make sure user's input is greater or equal to 1
-	jl	.fail		; if not, print m_badBounds
+	jl	.fail1		; if not, print m_badBounds
 	cmp EAX, 9		; make sure user's input is less than or equal to 9
-	jg	.fail		; if not, print m_badBounds
+	jg	.fail1		; if not, print m_badBounds
 
 	call setSpot		; if input is within bounds, attempt to set space
 
 	jmp .end		; return
-.fail:
-	push m_badBounds	; push out of bounds warning string to stack
+.fail1:
+	push m_badBounds		; push out of bounds warning string to stack
+	push f_str		; push string format string to stack
 	call printf		; print warning to user
-	add ESP, 4		; adjust stack pointer
-	
-	call printBoard		; Print the board again
-
-	jmp getInput		; Go to top of function
+	add ESP, 8		; adjust stack pointer
+	jmp .end		; return
 
 .end:	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END getInput
@@ -224,9 +155,7 @@ setSpot:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN setSpot
 	call printf		; print warning to user
 	add ESP, 4		; adjust stack pointer
 
-	call printBoard		; Print the board again
-
-	call getInput		; Get input again
+	jmp .end		; ret
 
 .end:	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END setSpot
@@ -302,56 +231,55 @@ calcWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Begin calcWin
 
 	mov EBX, O_VAL
 	call checkWin
-	cmp EAX, 1		; If O won, EAX will be 1
+	cmp EAX, 1		; If O won, EAX will be 2
 	je .OWin
-
 	call checkTie
-	cmp EAX, 1		; If there are no empty space, EAX will be 1
+	cmp EAX, 1
 	je .tie
-	jmp .noWin		; Else there's no endgame yet
+	jmp .noWin
 	 
-.XWin:				; If X won
-	mov EAX, [playSymb]	; Put the player's symbol in EAX
-	cmp EAX, X_VAL		; See if the player won
-	je .playWin		; If so, go to player win
-	jmp .compWin		; Else go to computer win
+.XWin:
+	mov EAX, [playSymb]
+	cmp EAX, X_VAL
+	je .playWin
+	jmp .compWin
 
-.OWin:				; If O won
-	mov EAX, [playSymb]	; Put the player's symbol in EAX
-	cmp EAX, O_VAL		; See if the player won
-	je .playWin		; if so, go to player win
-	jmp .compWin		; Else go to computer win
+.OWin:
+	mov EAX, [playSymb]
+	cmp EAX, O_VAL
+	je .playWin
+	jmp .compWin
 
-.compWin:			; if the computer won
-	push m_compWin		; Say it
+.compWin:
+	push m_compWin
 	call printf
 	add ESP, 4
 
-	mov EAX, 1		; Return 1
+	mov EAX, 1
 	jmp .end
 
-.playWin:			; if the player won
-	push m_playWin		; Print player message
-	call printf	
+.playWin:
+	push m_playWin
+	call printf
 	add ESP, 4
 	
-	mov EAX, 2		; Return 2
+	mov EAX, 2
 	jmp .end
 
 .tie:
-	push m_tieWin		; If it is a tie game
-	call printf		; Print tie message
+	push m_tieWin
+	call printf
 	add ESP, 4
 	
 	mov EAX, 3		; Return 3
 	jmp .end
 
 .noWin:
-	push newline		; Print empty newline
-	call printf		
-	add ESP, 4	
+	push newline
+	call printf
+	add ESP, 4
 
-	xor EAX, EAX		; Return 0	
+	xor EAX, EAX
 	jmp .end
 
 .end:	ret
@@ -452,11 +380,11 @@ checkWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
 
 	mov EAX, [board + 16]	; Middle center cell
 	cmp EAX, EBX
-	jne .rlDi
+	jne .lrDi
 
 	mov EAX, [board + 32]	; Middle right cell
 	cmp EAX, EBX
-	jne .rlDi
+	jne .lrDi
 	jmp .win
 
 
@@ -486,7 +414,7 @@ checkWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END checkWin
 
 checkTie:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkTie
-	xor ECX, ECX		; Zero out ECX
+	xor ECX, ECX
 
 .top:
 	cmp ECX, 9
@@ -498,19 +426,19 @@ checkTie:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkTie
 
 	mov EBX, [board + EAX]	; Put spot in array into EBX
 	
-	cmp EBX, 0		; Check if that space is empty
-	je .empty		; If so, jump to that exit
-	jmp .bottom		; Else continue on with the loop
+	cmp EBX, 0
+	je .empty
+	jmp .bottom
 
 .bottom:
-	inc ECX			; Increment ECX
-	jmp .top		; Jump to the top of the loop
+	inc ECX
+	jmp .top
 
 .empty:				; If there's an esmpty space
-	xor EAX, EAX		; Return 0
+	xor EAX, EAX
 	ret
-.end:				; There is no moer empty space
-	mov EAX, 1		; Return 1
+.end:	
+	mov EAX, 1
 	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END checkTie
 
@@ -580,15 +508,6 @@ switchPlayers:;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN switchPlayers
 	
 	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END switchPlayers
-
-debugHERE:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Start of Debug here
-	pushad			; Store all registers
-	push m_here		; Push message onto stack
-	call printf		; Print here
-	add ESP, 4		; Adjust stack pointer
-	popad			; Restore all registers
-	ret
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END debugHERE
 
 exit:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN exit
 	push norm		; push normal character set escape character to stack
