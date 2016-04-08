@@ -42,7 +42,15 @@ SECTION .data
 	m_playWin:	db "Crap, the player won...", 10, 0	; Player win message
 	m_here:		db "HERE", 10, 0
 	m_promptIn:	db "Please enter a space to play", 10, 0	; Prompt Input Message
+	m_currWins:	db "You won ", 0
+	m_currLoss:	db "You lost ", 0
+	m_currTies:	db "You tied ", 0
+	m_totGames:	db " out of ", 0
+	m_games:	db " games", 10, 0
 	currentSymb:	dd X_VAL		; Current playing symbol
+	wins:		dd 0			; Player wins
+	loss:		dd 0			; Player loss
+	ties:		dd 0			; Ties
 
 SECTION .text
 	global main
@@ -64,6 +72,8 @@ main:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN main
 	add ESP, 4
 
 	call choosePlayers	; choose which player goes first (also sets random seed for program)
+
+	jmp pvploop
 
 pvailoop:			; Player versus AI loop
 	call printBoard		; print original empty board
@@ -92,7 +102,7 @@ pvailoop:			; Player versus AI loop
 	je .gameloop		; continue game loop
 	jmp exit		; For now, exit	
 
-	;call endgame		; something to update scores, reset board, etc.
+	call endgame		; something to update scores, reset board, etc.
 	;call playAgain		; maybe? return value of 0 to continue? else to quit?
 	call switchPlayers	; switch players' symbols
 	jmp pvailoop		; start new game
@@ -128,7 +138,7 @@ aivailoop:			; AI versus AI game
 	je .gameloop		; continue game loop
 	jmp exit		; For now, exit	
 
-	;call endgame		; something to update scores, reset board, etc.
+	call endgame		; something to update scores, reset board, etc.
 	;call playAgain		; maybe? return value of 0 to continue? else to quit?
 	call switchPlayers	; switch players' symbols
 	jmp aivailoop		; start new game
@@ -162,13 +172,12 @@ pvploop:			; Player versus player game
 	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
 	cmp EAX, 0		; if game is still going, 
 	je .gameloop		; continue game loop
-	jmp exit		; For now, exit	
 
-	;call endgame		; something to update scores, reset board, etc.
+	call endgame		; something to update scores, reset board, etc.
 	;call playAgain		; maybe? return value of 0 to continue? else to quit?
-	call switchPlayers	; switch players' symbols
-	jmp pvploop		; start new game
-
+	;call switchPlayers	; switch players' symbols
+	;jmp pvploop		; start new game
+	jmp .exit
 .exit:
 	;call printScores	; a method to print final scores before exiting entirely
 	jmp exit		; exit program
@@ -581,7 +590,125 @@ switchPlayers:;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN switchPlayers
 	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END switchPlayers
 
-debugHERE:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Start of Debug here
+endgame:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; START endgame
+
+	cmp EAX, 1		; See if the computer won
+	je .playerLost		
+	cmp EAX, 2		; See if the player won
+	je .playerWon
+	jmp .tie		; Otherwise there was a tie
+
+.playerWon:			; If the player won
+	mov EAX, [wins]		; Move wins into EAX
+	inc EAX			; Increment EAX
+	mov [wins], EAX		; Store the wins
+	jmp .out		; Jump out of if's
+
+.playerLost:			; If the player lost
+	mov EAX, [loss]		; Move loss into EAX
+	inc EAX			; Increment losses
+	mov [loss], EAX		; Store the loss
+	jmp .out		; Jump out of if's
+
+.tie:				; If there was a tie
+	mov EAX, [ties]		; Move ties into EAX
+	inc EAX			; Increment EAX
+	mov [ties], EAX		; Store ties
+	jmp .out		; Jump out of loop
+
+.out:				; Outside of if's
+	call reportStatistics	; Report statistics
+
+	xor ECX, ECX		; Clear out ECX
+.top:				; Top of loop
+	cmp ECX, 9		; If ECX is < 8
+	je .end			; Exit function
+	
+	mov EAX, ECX		; Stic ECX into EAX
+	xor EDX, EDX		; Clear out EDX
+
+	imul EAX, 4		; Multiply by the size of DWORD
+	mov [board + EAX], DWORD 0	; Clear out that spot in the board
+
+	inc ECX			; Increment ECX
+	jmp .top		; Jump to top of loop
+
+.end: ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END endgame
+
+reportStatistics:;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN reportStatistics
+	;;;;;;;;;;;;;;;;;;;;;;;;; Print wins
+	push m_currWins		; Push message to stack
+	call printf		; Call printf
+	add ESP, 4		; Adjust stack pointer
+	
+	mov EAX, [wins]		; Stick num of wins in EAX
+	push EAX		; Push EAX to stack
+	push f_int		; Push integer format
+	call printf		; Call printf
+	add ESP, 8		; Adjust stack pointer
+
+	call totalGames		; totalGames prints rest of message
+
+	;;;;;;;;;;;;;;;;;;;;;;;;; Print loss
+	push m_currLoss		; Push current loss message
+	call printf		; Call printf
+	add ESP, 4		; Adjust stack pointer
+
+	mov EAX, [loss]		; Stick loss number in EAX
+	push EAX		; Push EAX to stack
+	push f_int		; Push integer format
+	call printf		; Print it all out
+	add ESP, 8		; Adjust stack pointer
+
+	call totalGames		; Print rest of message
+
+	;;;;;;;;;;;;;;;;;;;;;;;;; Print ties
+	push m_currTies		; Push tie message
+	call printf		; Print it out
+	add ESP, 4		; Adjust stack pointer
+
+	mov EAX, [ties]		; Move ties into EAX
+	push EAX		; Push EAX to stack
+	push f_int		; Push integer format
+	call printf		; Print it out
+	add ESP, 8		; Adjust stack pointer
+	
+	call totalGames		; Print the rest of message
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END reportStatistics
+
+totalGames:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN totalGames
+	push m_totGames		; Push total games messaage onto stack
+	call printf		; Print it
+	add ESP, 4		; Adjust stack pointer
+
+	mov EAX, [wins]		; EAX = player wins
+	mov EBX, [loss]		; EBX = player loss
+	mov ECX, [ties]		; ECX = ties
+
+	add EAX, EBX		; EAX += EBX
+	add EAX, ECX		; EAX += ECX
+
+	push EAX		; Push EAX
+	push f_int		; Push integer format
+	call printf		; Call printf
+	add ESP, 8		; Clear off stack
+
+	push m_games		; Push the games message
+	call printf		; Print it
+	add ESP, 4		; Clear out stack
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END totalGames
+
+prettyPrint:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN prettyPrint
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END prettyPrint
+
+debugHERE:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN Debug here
 	pushad			; Store all registers
 	push m_here		; Push message onto stack
 	call printf		; Print here
