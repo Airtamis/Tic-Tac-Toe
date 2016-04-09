@@ -43,6 +43,7 @@ SECTION .data
 	m_here:		db "HERE", 10, 0
 	m_promptIn:	db "Please enter a space to play", 10, 0	; Prompt Input Message
 	currentSymb:	dd X_VAL		; Current playing symbol
+	firstTurn:	dd 0			; 0 if first turn, 1 if not
 
 SECTION .text
 	global main
@@ -206,6 +207,7 @@ getInput:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getInput
 .end:	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END getInput
 
+;;Takes EAX as parameter;;
 setSpot:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN setSpot
 	dec EAX			; adjust input for array indexing
 	xor EDX, EDX		; set EDX to 0 before multiplication
@@ -293,6 +295,178 @@ printBoard:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN printBoard
 	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END printBoard
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN computer
+computer:
+	mov EAX, [firstTurn]	;check if first turn
+	cmp EAX, 0		;if equal, first turn
+	je  .first		;calculate random spot to move and go there
+	
+;if not the first move, check if winning moves exist for computer or player
+.checkWins:
+	mov EBX, [compSymb]
+	call calcWinMove	;check if computer has winning move	
+	cmp EAX, 0		;if 0, no move was found
+	jne .makeMove		;if not 0, make the move found
+
+	mov EBX, [playSymb]
+	call calcWinMove	;check if player has winning move
+	cmp EAX, 0		;if 0, no move was found
+	jne .makeMove		;if not 0, make the move found
+
+;if no winning moves, continue to main algorithm to 
+.findMove:
+	;main algorithm should go here
+
+.makeMove:
+	call setSpot		;set spot (takes EAX as parameter)
+
+.first:
+	call rand		;store random value in EAX
+	xor EDX, EDX		;set EDX to 0 to prepare for division
+	mov EBX, 9		;willl divide by 9
+	div EBX
+	mov EAX, EDX		;copy EDX remainder into EAX
+	inc EAX			;format EAX for setSpot function
+	call setSpot		;sets spot (takes EAX as parameter)
+
+.exit:  
+	ret			;exit function
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END computer
+
+;;Takes EBX as input.  EBX holds current symbol being checked
+calcWinMove:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
+;;HAS NOT BEEN UPDATED TO WORK WITH COUNTER YET;;
+.topRow:
+	mov EAX, [board]	; Top left cell
+	cmp EAX, EBX
+	jne .centRow
+
+	mov EAX, [board + 4]	; Top center cell
+	cmp EAX, EBX
+	jne .centRow
+
+	mov EAX, [board + 8]	; Top right cell
+	cmp EAX, EBX
+	jne .centRow
+	jmp .win
+
+.centRow:
+	mov EAX, [board + 12]	; Middle left cell
+	cmp EAX, EBX
+	jne .botRow
+
+	mov EAX, [board + 16]	; Middle center cell
+	cmp EAX, EBX
+	jne .botRow
+
+	mov EAX, [board + 20]	; Middle right cell
+	cmp EAX, EBX
+	jne .botRow
+	jmp .win
+
+.botRow:
+	mov EAX, [board + 24]	; Middle left cell
+	cmp EAX, EBX
+	jne .leftCol
+
+	mov EAX, [board + 28]	; Middle center cell
+	cmp EAX, EBX
+	jne .leftCol
+
+	mov EAX, [board + 32]	; Middle right cell
+	cmp EAX, EBX
+	jne .leftCol
+	jmp .win
+
+
+.leftCol:
+	mov EAX, [board]	; Middle left cell
+	cmp EAX, EBX
+	jne .centCol
+
+	mov EAX, [board + 12]	; Middle center cell
+	cmp EAX, EBX
+	jne .centCol
+
+	mov EAX, [board + 24]	; Middle right cell
+	cmp EAX, EBX
+	jne .centCol
+	jmp .win
+
+.centCol:
+	mov EAX, [board + 4]	; Middle left cell
+	cmp EAX, EBX
+	jne .rightCol
+
+	mov EAX, [board + 16]	; Middle center cell
+	cmp EAX, EBX
+	jne .rightCol
+
+	mov EAX, [board + 28]	; Middle right cell
+	cmp EAX, EBX
+	jne .rightCol
+	jmp .win
+
+
+.rightCol:
+	mov EAX, [board + 8]	; Middle left cell
+	cmp EAX, EBX
+	jne .lrDi
+
+	mov EAX, [board + 20]	; Middle center cell
+	cmp EAX, EBX
+	jne .lrDi
+
+	mov EAX, [board + 32]	; Middle right cell
+	cmp EAX, EBX
+	jne .lrDi
+	jmp .win
+
+.lrDi:
+	mov EAX, [board]	; Middle left cell
+	cmp EAX, EBX
+	jne .rlDi
+
+	mov EAX, [board + 16]	; Middle center cell
+	cmp EAX, EBX
+	jne .rlDi
+
+	mov EAX, [board + 32]	; Middle right cell
+	cmp EAX, EBX
+	jne .rlDi
+	jmp .win
+
+
+.rlDi:
+	mov EAX, [board + 8]	; Middle left cell
+	cmp EAX, EBX
+	jne .fail
+
+	mov EAX, [board + 16]	; Middle center cell
+	cmp EAX, EBX
+	jne .fail
+
+	mov EAX, [board + 24]	; Middle right cell
+	cmp EAX, EBX
+	jne .fail
+	jmp .win
+
+
+.fail:
+	xor EAX, EAX
+	jmp .end
+.win:
+	mov EAX, 1
+	jmp .end
+	
+.end:	ret
+
+.increment:
+	inc ECX		;increment counter
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END checkWin
+
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; EAX = 0 if no win, 1 if computer win, 2 if player win, 3 if tie
 calcWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Begin calcWin
 	mov EBX, X_VAL
@@ -356,6 +530,7 @@ calcWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Begin calcWin
 
 .end:	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END calcWin
+
 
 checkWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
 
