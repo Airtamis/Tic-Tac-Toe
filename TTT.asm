@@ -14,10 +14,15 @@
 %define X_VAL 1
 %define O_VAL 2
 
+%define PVAI 1
+%define PVP 2
+%define AIVAI 3
+
 SECTION .bss
 	input:		resd 1			; User inputed space
 	playSymb:	resd 1			; The Player's symbol
 	compSymb:	resd 1			; The Computer's symbol
+	mode:		resd 1			; Game mode (PVAI, PVP, or AIVAI)   
 
 SECTION .data
 	m_badBounds:	db "ERROR: Invalid space", 10, 0 ;user chose a space that is not 1-9
@@ -30,27 +35,124 @@ SECTION .data
 	blue:		db 27, "[34m", 0	; Blue foreground
 	black:		db 27, "[30m", 0	; Black foreground
 	alt:		db 27, "(0", 0		; Alternate character set
-	norm:		db 27, "(B", 0		; Normal Character Set
+	norm:		db 27, "(B", 10, 0		; Normal Character Set
 	reset:		db 27, "(B", 27, "[40m", 0	; Normal character set and background
+	clearScreen:	db 27, "[H", 27, "[2J", 0
 	X:		db "X", 0		; X
 	O:		db "O", 0		; Y
 	E:		db " ", 0		; Space
+	a:		db "a", 0
+	pName:		db "Dave"		; Player/Player1/Computer1 Name
+			times 100-$+pName db 0	; Reserve enough room in pName for 100 characters total
+	cName:		db "Hal"		; Computer/Player2/Computer2 Name
+			times 100-$+cName db 0	; Reserve enough room in cName for 100 characters total
 	m_badSpot:	db "Space already occupied", 10, 0 ; User chose occupied spot in board
 	newline:	db 10, 0		; newline character
 	m_tieWin:	db "Tie game!", 10, 0	; Tie Game Message
 	m_compWin:	db "The Computer Won, of course!", 10, 0 ; Computer Win Message
 	m_playWin:	db "Crap, the player won...", 10, 0	; Player win message
 	m_here:		db "HERE", 10, 0
-	m_promptIn:	db "Please enter a space to play", 10, 0	; Prompt Input Message
 	m_currWins:	db "You won ", 0
 	m_currLoss:	db "You lost ", 0
 	m_currTies:	db "You tied ", 0
 	m_totGames:	db " out of ", 0
 	m_games:	db " games", 10, 0
+	m_playerMove:	db ", please make a move. ", 0	; The player's turn
+	m_compMove:	db " is making a move.", 0		; The computer's turn
+	m_characterIs:	db " is ", 0
+	m_promptName:	db "Please enter your name : ", 0	; Prompt the only player for his name
+	m_prompt1stName:db "Please enter player 1's name: ", 0	; Prompt player 1 for his name
+	m_prompt2ndName:db "Please enter player 2's name: ", 0	; Prompt player 2 for his name
+	m_promptMode:	db "Please select a game mode by entering the corresponing number: ", 10,
+			db "1) Play against an AI", 10
+			db "2) Play against another player", 10
+			db "3) Watch two AI duke it out", 10, 0
 	currentSymb:	dd X_VAL		; Current playing symbol
 	wins:		dd 0			; Player wins
 	loss:		dd 0			; Player loss
 	ties:		dd 0			; Ties
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CELL ONE ESCAPES
+	cell1Start:	db 27, "[3;2H", 0
+	cell1_2:	db 27, "[4;2H", 0
+	cell1_3:	db 27, "[5;2H", 0
+	cell1_4:	db 27, "[6;2H", 0
+	cell1_5:	db 27, "[7;2H", 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CELL TWO ESCAPES
+	cell2Start:	db 27, "[3;7H", 0
+	cell2_2:	db 27, "[4;7H", 0
+	cell2_3:	db 27, "[5;7H", 0
+	cell2_4:	db 27, "[6;7H", 0
+	cell2_5:	db 27, "[7;7H", 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CELL THREE ESCAPES
+	cell3Start:	db 27, "[3;12H", 0
+	cell3_2:	db 27, "[4;12H", 0
+	cell3_3:	db 27, "[5;12H", 0
+	cell3_4:	db 27, "[6;12H", 0
+	cell3_5:	db 27, "[7;12H", 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CELL FOUR ESCAPES
+	cell4Start:	db 27, "[8;2H", 0
+	cell4_2:	db 27, "[9;2H", 0
+	cell4_3:	db 27, "[10;2H", 0
+	cell4_4:	db 27, "[11;2H", 0
+	cell4_5:	db 27, "[12;2H", 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CELL FIVE ESCAPES
+	cell5Start:	db 27, "[8;7H", 0
+	cell5_2:	db 27, "[9;7H", 0
+	cell5_3:	db 27, "[10;7H", 0
+	cell5_4:	db 27, "[11;7H", 0
+	cell5_5:	db 27, "[12;7H", 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CELL SIX ESCAPES
+	cell6Start:	db 27, "[8;12H", 0
+	cell6_2:	db 27, "[9;12H", 0
+	cell6_3:	db 27, "[10;12H", 0
+	cell6_4:	db 27, "[11;12H", 0
+	cell6_5:	db 27, "[12;12H", 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CELL SEVEN ESCAPES
+	cell7Start:	db 27, "[13;2H", 0
+	cell7_2:	db 27, "[14;2H", 0
+	cell7_3:	db 27, "[15;2H", 0
+	cell7_4:	db 27, "[16;2H", 0
+	cell7_5:	db 27, "[17;2H", 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CELL EIGHT ESCAPES
+	cell8Start:	db 27, "[13;7H", 0
+	cell8_2:	db 27, "[14;7H", 0
+	cell8_3:	db 27, "[15;7H", 0
+	cell8_4:	db 27, "[16;7H", 0
+	cell8_5:	db 27, "[17;7H", 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CELL NINE ESCAPES
+	cell9Start:	db 27, "[13;12H", 0
+	cell9_2:	db 27, "[14;12H", 0
+	cell9_3:	db 27, "[15;12H", 0
+	cell9_4:	db 27, "[16;12H", 0
+	cell9_5:	db 27, "[17;12H", 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; LEFT WALL ESCAPES
+	lft1:		db 27, "[3;1H", 0
+	lft2:		db 27, "[4;1H", 0
+	lft3:		db 27, "[5;1H", 0
+	lft4:		db 27, "[6;1H", 0
+	lft5:		db 27, "[7;1H", 0
+	lft6:		db 27, "[8;1H", 0
+	lft7:		db 27, "[9;1H", 0
+	lft8:		db 27, "[10;1H", 0
+	lft9:		db 27, "[11;1H", 0
+	lft10:		db 27, "[12;1H", 0
+	lft11:		db 27, "[13;1H", 0
+	lft12:		db 27, "[14;1H", 0
+	lft13:		db 27, "[15;1H", 0
+	lft14:		db 27, "[16;1H", 0
+	lft15:		db 27, "[17;1H", 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END CELL ESCAPES
+	solidRow:	db "aaaaa", 0
+	xRow1:		db "\  /a", 0
+	xRow2:		db " \/ a", 0
+	xRow3:		db " /\ a", 0
+	xRow4:		db "/  \a", 0
+	oRow1:		db " ff a", 0
+	oRow2:		db "f  fa", 0
+	oRow3:		db "f  fa", 0
+	oRow4:		db " ff a", 0
+	ePrint:		db "    a", 0
 
 SECTION .text
 	global main
@@ -61,8 +163,6 @@ SECTION .text
 	extern srand
 
 main:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN main
-	;jmp exit
-
 	push white		; Set the foreground to white
 	call printf
 	add ESP, 4
@@ -73,10 +173,23 @@ main:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN main
 
 	call choosePlayers	; choose which player goes first (also sets random seed for program)
 
-	jmp pvploop
+	call getMode
 
+	mov EAX, [mode]
+
+	cmp EAX, PVAI
+	je pvaiInit
+	cmp EAX, PVP
+	je pvpInit
+	cmp EAX, AIVAI
+	je aivailoop
+	;jmp to get mode again
+
+pvaiInit:			; Initialize pvai cycle
+	call getName
 pvailoop:			; Player versus AI loop
-	call printBoard		; print original empty board
+
+	call prettyPrint		; print original empty board
 
 .gameloop:
 	mov EAX, [currentSymb]	;put current symbol in EAX
@@ -95,8 +208,8 @@ pvailoop:			; Player versus AI loop
 	jmp .bottom
 	
 .bottom:
-	call printBoard
-	call switchTurn		; switch currentSymb to O's
+	call switchTurn		; switch who's turn it is
+	call prettyPrint
 	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
 	cmp EAX, 0		; if game is still going, 
 	je .gameloop		; continue game loop
@@ -112,7 +225,7 @@ pvailoop:			; Player versus AI loop
 	jmp exit		; exit program
 
 aivailoop:			; AI versus AI game
-	call printBoard		; print original empty board
+	call prettyPrint		; print original empty board
 
 .gameloop:
 	mov EAX, [currentSymb]	;put current symbol in EAX
@@ -131,8 +244,8 @@ aivailoop:			; AI versus AI game
 	jmp .bottom
 	
 .bottom:
-	call printBoard
-	call switchTurn		; switch currentSymb to O's
+	call switchTurn		; Switch who's turn it is
+	call prettyPrint
 	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
 	cmp EAX, 0		; if game is still going, 
 	je .gameloop		; continue game loop
@@ -147,8 +260,11 @@ aivailoop:			; AI versus AI game
 	;call printScores	; a method to print final scores before exiting entirely
 	jmp exit		; exit program
 
+pvpInit:
+	call getName
+	call getOtherName
 pvploop:			; Player versus player game
-	call printBoard		; print original empty board
+	call prettyPrint	; print original empty board
 
 .gameloop:
 	mov EAX, [currentSymb]	;put current symbol in EAX
@@ -167,8 +283,8 @@ pvploop:			; Player versus player game
 	jmp .bottom
 	
 .bottom:
-	call printBoard
-	call switchTurn		; switch currentSymb to O's
+	call switchTurn		; Switch who's turn it is
+	call prettyPrint
 	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
 	cmp EAX, 0		; if game is still going, 
 	je .gameloop		; continue game loop
@@ -184,10 +300,6 @@ pvploop:			; Player versus player game
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END main
 
 getInput:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getInput
-	push m_promptIn		; Push message to prompt input
-	call printf		; Print the message
-	add ESP, 4		; Adjust stack pointer
-
 	push input		; push variable to store input to stack
 	push f_int		; push format string for getting integer input
 	call scanf		; get user's inputted move
@@ -204,12 +316,12 @@ getInput:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getInput
 
 	jmp .end		; return
 .fail:
+	call prettyPrint
+
 	push m_badBounds	; push out of bounds warning string to stack
 	call printf		; print warning to user
 	add ESP, 4		; adjust stack pointer
 	
-	call printBoard		; Print the board again
-
 	jmp getInput		; Go to top of function
 
 .end:	ret
@@ -229,11 +341,11 @@ setSpot:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN setSpot
 	mov [board + EAX], EBX  ; set board spot to player's symbol
 	jmp .end		; ret
 .bad:
+	call prettyPrint
+
 	push m_badSpot		; move warning string that space is occupied to stack
 	call printf		; print warning to user
 	add ESP, 4		; adjust stack pointer
-
-	call printBoard		; Print the board again
 
 	call getInput		; Get input again
 
@@ -704,9 +816,1604 @@ totalGames:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN totalGames
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END totalGames
 
 prettyPrint:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN prettyPrint
+	push clearScreen
+	call printf
+	add ESP, 4
+
+	call gameInfo
+
+	push alt
+	call printf
+	add ESP, 4
+
+	call drawCell1
+	call drawCell2
+	call drawCell3
+	call drawCell4
+	call drawCell5
+	call drawCell6
+	call drawCell7
+	call drawCell8
+	call drawCell9
+
+	call drawBorders
+
+	push norm
+	call printf
+	add ESP, 4
+
+	call turnInfo
+
+.exit:	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END prettyPrint
+
+drawCell1:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawCell1
+	mov EAX, [board]
+	cmp EAX, X_VAL
+	je .Xprint
+	cmp EAX, O_VAL
+	je .Oprint
+	jmp .EPrint
+
+.Xprint:
+	push cell1Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell1_2
+	call printf
+	add ESP, 4
+
+	push xRow1
+	call printf
+	add ESP, 4
+
+	push cell1_3
+	call printf
+	add ESP, 4
+
+	push xRow2
+	call printf
+	add ESP, 4
+
+	push cell1_4
+	call printf
+	add ESP, 4
+
+	push xRow3
+	call printf
+	add ESP, 4
+
+	push cell1_5
+	call printf
+	add ESP, 4
+
+	push xRow4
+	call printf
+	add ESP, 4
 
 	ret
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END prettyPrint
+.Oprint:
+	push cell1Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell1_2
+	call printf
+	add ESP, 4
+
+	push oRow1
+	call printf
+	add ESP, 4
+
+	push cell1_3
+	call printf
+	add ESP, 4
+
+	push oRow2
+	call printf
+	add ESP, 4
+
+	push cell1_4
+	call printf
+	add ESP, 4
+
+	push oRow3
+	call printf
+	add ESP, 4
+
+	push cell1_5
+	call printf
+	add ESP, 4
+
+	push oRow4
+	call printf
+	add ESP, 4
+
+	ret
+.EPrint:
+	push cell1Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell1_2
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell1_3
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell1_4
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell1_5
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawCell1
+
+drawCell2:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawCell2
+	mov EAX, [board + 4]
+	cmp EAX, X_VAL
+	je .Xprint
+	cmp EAX, O_VAL
+	je .Oprint
+	jmp .EPrint
+
+.Xprint:
+	push cell2Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell2_2
+	call printf
+	add ESP, 4
+
+	push xRow1
+	call printf
+	add ESP, 4
+
+	push cell2_3
+	call printf
+	add ESP, 4
+
+	push xRow2
+	call printf
+	add ESP, 4
+
+	push cell2_4
+	call printf
+	add ESP, 4
+
+	push xRow3
+	call printf
+	add ESP, 4
+
+	push cell2_5
+	call printf
+	add ESP, 4
+
+	push xRow4
+	call printf
+	add ESP, 4
+
+	ret
+.Oprint:
+	push cell2Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell2_2
+	call printf
+	add ESP, 4
+
+	push oRow1
+	call printf
+	add ESP, 4
+
+	push cell2_3
+	call printf
+	add ESP, 4
+
+	push oRow2
+	call printf
+	add ESP, 4
+
+	push cell2_4
+	call printf
+	add ESP, 4
+
+	push oRow3
+	call printf
+	add ESP, 4
+
+	push cell2_5
+	call printf
+	add ESP, 4
+
+	push oRow4
+	call printf
+	add ESP, 4
+
+	ret
+.EPrint:
+	push cell2Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell2_2
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell2_3
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell2_4
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell2_5
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawCell2
+
+drawCell3:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawCell3
+	mov EAX, [board + 8]
+	cmp EAX, X_VAL
+	je .Xprint
+	cmp EAX, O_VAL
+	je .Oprint
+	jmp .EPrint
+
+.Xprint:
+	push cell3Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell3_2
+	call printf
+	add ESP, 4
+
+	push xRow1
+	call printf
+	add ESP, 4
+
+	push cell3_3
+	call printf
+	add ESP, 4
+
+	push xRow2
+	call printf
+	add ESP, 4
+
+	push cell3_4
+	call printf
+	add ESP, 4
+
+	push xRow3
+	call printf
+	add ESP, 4
+
+	push cell3_5
+	call printf
+	add ESP, 4
+
+	push xRow4
+	call printf
+	add ESP, 4
+
+	ret
+.Oprint:
+	push cell3Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell3_2
+	call printf
+	add ESP, 4
+
+	push oRow1
+	call printf
+	add ESP, 4
+
+	push cell3_3
+	call printf
+	add ESP, 4
+
+	push oRow2
+	call printf
+	add ESP, 4
+
+	push cell3_4
+	call printf
+	add ESP, 4
+
+	push oRow3
+	call printf
+	add ESP, 4
+
+	push cell3_5
+	call printf
+	add ESP, 4
+
+	push oRow4
+	call printf
+	add ESP, 4
+
+	ret
+.EPrint:
+	push cell3Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell3_2
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell3_3
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell3_4
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell3_5
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	ret
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawCell3
+
+drawCell4:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawCell4
+	mov EAX, [board + 12]
+	cmp EAX, X_VAL
+	je .Xprint
+	cmp EAX, O_VAL
+	je .Oprint
+	jmp .EPrint
+
+.Xprint:
+	push cell4Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell4_2
+	call printf
+	add ESP, 4
+
+	push xRow1
+	call printf
+	add ESP, 4
+
+	push cell4_3
+	call printf
+	add ESP, 4
+
+	push xRow2
+	call printf
+	add ESP, 4
+
+	push cell4_4
+	call printf
+	add ESP, 4
+
+	push xRow3
+	call printf
+	add ESP, 4
+
+	push cell4_5
+	call printf
+	add ESP, 4
+
+	push xRow4
+	call printf
+	add ESP, 4
+
+	ret
+.Oprint:
+	push cell4Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell4_2
+	call printf
+	add ESP, 4
+
+	push oRow1
+	call printf
+	add ESP, 4
+
+	push cell4_3
+	call printf
+	add ESP, 4
+
+	push oRow2
+	call printf
+	add ESP, 4
+
+	push cell4_4
+	call printf
+	add ESP, 4
+
+	push oRow3
+	call printf
+	add ESP, 4
+
+	push cell4_5
+	call printf
+	add ESP, 4
+
+	push oRow4
+	call printf
+	add ESP, 4
+
+	ret
+.EPrint:
+	push cell4Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell4_2
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell4_3
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell4_4
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell4_5
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawCell4
+
+drawCell5:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawCell5
+	mov EAX, [board + 16]
+	cmp EAX, X_VAL
+	je .Xprint
+	cmp EAX, O_VAL
+	je .Oprint
+	jmp .EPrint
+
+.Xprint:
+	push cell5Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell5_2
+	call printf
+	add ESP, 4
+
+	push xRow1
+	call printf
+	add ESP, 4
+
+	push cell5_3
+	call printf
+	add ESP, 4
+
+	push xRow2
+	call printf
+	add ESP, 4
+
+	push cell5_4
+	call printf
+	add ESP, 4
+
+	push xRow3
+	call printf
+	add ESP, 4
+
+	push cell5_5
+	call printf
+	add ESP, 4
+
+	push xRow4
+	call printf
+	add ESP, 4
+
+	ret
+.Oprint:
+	push cell5Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell5_2
+	call printf
+	add ESP, 4
+
+	push oRow1
+	call printf
+	add ESP, 4
+
+	push cell5_3
+	call printf
+	add ESP, 4
+
+	push oRow2
+	call printf
+	add ESP, 4
+
+	push cell5_4
+	call printf
+	add ESP, 4
+
+	push oRow3
+	call printf
+	add ESP, 4
+
+	push cell5_5
+	call printf
+	add ESP, 4
+
+	push oRow4
+	call printf
+	add ESP, 4
+
+	ret
+.EPrint:
+	push cell5Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell5_2
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell5_3
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell5_4
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell5_5
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawCell3
+
+drawCell6:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawCell6
+	mov EAX, [board + 20]
+	cmp EAX, X_VAL
+	je .Xprint
+	cmp EAX, O_VAL
+	je .Oprint
+	jmp .EPrint
+
+.Xprint:
+	push cell6Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell6_2
+	call printf
+	add ESP, 4
+
+	push xRow1
+	call printf
+	add ESP, 4
+
+	push cell6_3
+	call printf
+	add ESP, 4
+
+	push xRow2
+	call printf
+	add ESP, 4
+
+	push cell6_4
+	call printf
+	add ESP, 4
+
+	push xRow3
+	call printf
+	add ESP, 4
+
+	push cell6_5
+	call printf
+	add ESP, 4
+
+	push xRow4
+	call printf
+	add ESP, 4
+
+	ret
+.Oprint:
+	push cell6Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell6_2
+	call printf
+	add ESP, 4
+
+	push oRow1
+	call printf
+	add ESP, 4
+
+	push cell6_3
+	call printf
+	add ESP, 4
+
+	push oRow2
+	call printf
+	add ESP, 4
+
+	push cell6_4
+	call printf
+	add ESP, 4
+
+	push oRow3
+	call printf
+	add ESP, 4
+
+	push cell6_5
+	call printf
+	add ESP, 4
+
+	push oRow4
+	call printf
+	add ESP, 4
+
+	ret
+.EPrint:
+	push cell6Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell6_2
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell6_3
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell6_4
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell6_5
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawCell6
+
+drawCell7:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawCell7
+	mov EAX, [board + 24]
+	cmp EAX, X_VAL
+	je .Xprint
+	cmp EAX, O_VAL
+	je .Oprint
+	jmp .EPrint
+
+.Xprint:
+	push cell7Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell7_2
+	call printf
+	add ESP, 4
+
+	push xRow1
+	call printf
+	add ESP, 4
+
+	push cell7_3
+	call printf
+	add ESP, 4
+
+	push xRow2
+	call printf
+	add ESP, 4
+
+	push cell7_4
+	call printf
+	add ESP, 4
+
+	push xRow3
+	call printf
+	add ESP, 4
+
+	push cell7_5
+	call printf
+	add ESP, 4
+
+	push xRow4
+	call printf
+	add ESP, 4
+
+	ret
+.Oprint:
+	push cell7Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell7_2
+	call printf
+	add ESP, 4
+
+	push oRow1
+	call printf
+	add ESP, 4
+
+	push cell7_3
+	call printf
+	add ESP, 4
+
+	push oRow2
+	call printf
+	add ESP, 4
+
+	push cell7_4
+	call printf
+	add ESP, 4
+
+	push oRow3
+	call printf
+	add ESP, 4
+
+	push cell7_5
+	call printf
+	add ESP, 4
+
+	push oRow4
+	call printf
+	add ESP, 4
+
+	ret
+.EPrint:
+	push cell7Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell7_2
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell7_3
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell7_4
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell7_5
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawCell7
+
+drawCell8:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawCell8
+	mov EAX, [board + 28]
+	cmp EAX, X_VAL
+	je .Xprint
+	cmp EAX, O_VAL
+	je .Oprint
+	jmp .EPrint
+
+.Xprint:
+	push cell8Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell8_2
+	call printf
+	add ESP, 4
+
+	push xRow1
+	call printf
+	add ESP, 4
+
+	push cell8_3
+	call printf
+	add ESP, 4
+
+	push xRow2
+	call printf
+	add ESP, 4
+
+	push cell8_4
+	call printf
+	add ESP, 4
+
+	push xRow3
+	call printf
+	add ESP, 4
+
+	push cell8_5
+	call printf
+	add ESP, 4
+
+	push xRow4
+	call printf
+	add ESP, 4
+
+	ret
+.Oprint:
+	push cell8Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell8_2
+	call printf
+	add ESP, 4
+
+	push oRow1
+	call printf
+	add ESP, 4
+
+	push cell8_3
+	call printf
+	add ESP, 4
+
+	push oRow2
+	call printf
+	add ESP, 4
+
+	push cell8_4
+	call printf
+	add ESP, 4
+
+	push oRow3
+	call printf
+	add ESP, 4
+
+	push cell8_5
+	call printf
+	add ESP, 4
+
+	push oRow4
+	call printf
+	add ESP, 4
+
+	ret
+.EPrint:
+	push cell8Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell8_2
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell8_3
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell8_4
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell8_5
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawCell8
+
+drawCell9:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawCell9
+	mov EAX, [board + 32]
+	cmp EAX, X_VAL
+	je .Xprint
+	cmp EAX, O_VAL
+	je .Oprint
+	jmp .EPrint
+
+.Xprint:
+	push cell9Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell9_2
+	call printf
+	add ESP, 4
+
+	push xRow1
+	call printf
+	add ESP, 4
+
+	push cell9_3
+	call printf
+	add ESP, 4
+
+	push xRow2
+	call printf
+	add ESP, 4
+
+	push cell9_4
+	call printf
+	add ESP, 4
+
+	push xRow3
+	call printf
+	add ESP, 4
+
+	push cell9_5
+	call printf
+	add ESP, 4
+
+	push xRow4
+	call printf
+	add ESP, 4
+
+	ret
+.Oprint:
+	push cell9Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell9_2
+	call printf
+	add ESP, 4
+
+	push oRow1
+	call printf
+	add ESP, 4
+
+	push cell9_3
+	call printf
+	add ESP, 4
+
+	push oRow2
+	call printf
+	add ESP, 4
+
+	push cell9_4
+	call printf
+	add ESP, 4
+
+	push oRow3
+	call printf
+	add ESP, 4
+
+	push cell9_5
+	call printf
+	add ESP, 4
+
+	push oRow4
+	call printf
+	add ESP, 4
+
+	ret
+.EPrint:
+	push cell9Start
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	add ESP, 4
+
+	push cell9_2
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell9_3
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell9_4
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	push cell9_5
+	call printf
+	add ESP, 4
+
+	push ePrint
+	call printf
+	add ESP, 4
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawCell9
+
+drawBorders:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawBorders
+	push cell1Start
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft1
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft2
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft3
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft4
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft5
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft6
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft7
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft8
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft9
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft10
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft11
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft12
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft13
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft14
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push lft15
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push newline
+	call printf
+	add ESP, 4
+
+	push a
+	call printf
+	add ESP, 4
+
+	push solidRow
+	call printf
+	call printf
+	call printf
+	add ESP, 4
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawBorders 
+
+turnInfo:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN pvaiTurnInfo
+
+	mov EAX, [currentSymb]
+	cmp EAX, [playSymb]
+	je .playerTurn
+	jmp .compTurn
+
+.playerTurn:			; It is the player's turn to make a move
+	push pName
+	call printf
+	add ESP, 4
+	jmp .pmodePrint
+
+.compTurn:			; It is the computers turn to make a move
+	push cName
+	call printf
+	add ESP, 4
+	jmp .cmodePrint	
+
+.pmodePrint:			; First player's prompt
+	mov EAX, [mode]
+	cmp EAX, AIVAI		; The only wat this is computer is if mode is AIVAI
+	je .comp
+	jmp .prompt		; Else it's human
+
+.cmodePrint:			; Second player's promp
+	mov EAX, [mode]
+	cmp EAX, PVP		; The only way this is a human is if mode is PVP
+	je .prompt
+	jmp .comp		; Otherwise it's AI
+
+.prompt:
+	push m_playerMove
+	call printf
+	add ESP, 4
+
+	jmp .exit
+
+.comp:
+	push m_compMove
+	call printf
+	add ESP, 4
+	jmp .exit
+
+.exit:	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END turnInfo
+
+gameInfo:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN gameInfo
+	mov EAX, [playSymb]
+	cmp EAX, X_VAL
+	je .p1isX
+	jmp .p1isO
+
+.p1isX:
+	push pName
+	call printf
+	add ESP, 4
+
+	push m_characterIs
+	call printf
+	add ESP, 4
+
+	push X
+	call printf
+	add ESP, 4
+
+	push newline
+	call printf
+	add ESP, 4
+
+	push cName
+	call printf
+	add ESP, 4
+
+	push m_characterIs
+	call printf
+	add ESP, 4
+
+	push O
+	call printf
+	add ESP, 4
+
+	push newline
+	call printf
+	add ESP, 4
+
+	ret
+.p1isO:
+	push pName
+	call printf
+	add ESP, 4
+
+	push m_characterIs
+	call printf
+	add ESP, 4
+
+	push O
+	call printf
+	add ESP, 4
+
+	push newline
+	call printf
+	add ESP, 4
+
+	push cName
+	call printf
+	add ESP, 4
+
+	push m_characterIs
+	call printf
+	add ESP, 4
+
+	push X
+	call printf
+	add ESP, 4
+
+	push newline
+	call printf
+	add ESP, 4
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END gameInfo
+
+getName:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getName
+	push clearScreen
+	call printf
+	add ESP, 4
+
+	mov EAX, [mode]
+	cmp EAX, PVP
+	je .2ps
+
+.1p:
+	push m_promptName
+	call printf
+	add ESP, 4
+	jmp .getTheName
+
+.2ps:
+	push m_prompt1stName
+	call printf
+	add ESP, 4
+	jmp .getTheName
+
+.getTheName:
+	push pName
+	push f_str
+	call scanf
+	add ESP, 8
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END getName
+
+getOtherName:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getOtherName
+	push clearScreen
+	call printf
+	add ESP, 4
+
+	push m_prompt2ndName
+	call printf
+	add ESP, 4
+
+	push cName
+	push f_str
+	call scanf
+	add ESP, 8
+
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END getOtherName
+
+getMode:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getMode
+	push clearScreen
+	call printf
+	add ESP, 4
+
+	push m_promptMode
+	call printf
+	add ESP, 4
+
+	push mode
+	push f_int
+	call scanf
+	add ESP, 8
+
+	mov EAX, [mode]
+	cmp EAX, PVAI
+	jl .fail
+	cmp EAX, AIVAI
+	jg .fail
+	jmp .exit
+
+.fail:
+	call getMode
+
+.exit	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END getMode
 
 debugHERE:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN Debug here
 	pushad			; Store all registers
