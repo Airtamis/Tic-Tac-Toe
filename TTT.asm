@@ -158,7 +158,6 @@ SECTION .data
 	oRow3:		db "f  fa", 0
 	oRow4:		db " ff a", 0
 	ePrint:		db "    a", 0
-=======
 	enemySymb:	dd O_VAL		; Not playing symbol
 	firstTurn:	dd 0			; 0 if first turn, 1 if not
 
