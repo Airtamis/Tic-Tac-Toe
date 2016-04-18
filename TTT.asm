@@ -22,6 +22,7 @@ SECTION .bss
 	input:		resd 1			; User inputed space
 	playSymb:	resd 1			; The Player's symbol
 	compSymb:	resd 1			; The Computer's symbol
+	winner:		resd 1			; 1 If player won, 0 if Comp won
 	mode:		resd 1			; Game mode (PVAI, PVP, or AIVAI)   
 
 SECTION .data
@@ -30,12 +31,13 @@ SECTION .data
 	f_int: 		db "%d", 0 		; Integer format
 	f_strn:		db "%s", 10, 0 		; String format w newline
 	f_str:		db "%s", 0		; String format
+	f_char:		db "%c", 0		; Character format
 	white:		db 27, "[47m", 0	; White background
 	red:		db 27, "[31m", 0	; Red foreground
 	blue:		db 27, "[34m", 0	; Blue foreground
 	black:		db 27, "[30m", 0	; Black foreground
 	alt:		db 27, "(0", 0		; Alternate character set
-	norm:		db 27, "(B", 10, 0		; Normal Character Set
+	norm:		db 27, "(B", 0		; Normal Character Set
 	reset:		db 27, "(B", 27, "[40m", 0	; Normal character set and background
 	clearScreen:	db 27, "[H", 27, "[2J", 0
 	X:		db "X", 0		; X
@@ -49,24 +51,27 @@ SECTION .data
 	m_badSpot:	db "Space already occupied", 10, 0 ; User chose occupied spot in board
 	newline:	db 10, 0		; newline character
 	m_tieWin:	db "Tie game!", 10, 0	; Tie Game Message
-	m_compWin:	db "The Computer Won, of course!", 10, 0 ; Computer Win Message
-	m_playWin:	db "Crap, the player won...", 10, 0	; Player win message
+	m_winner:	db " is the winner!", 10, 0		; Is the winner message
+	m_anyKey:	db "Press enter to continue. ", 0	; Press enter to continue
 	m_here:		db "HERE", 10, 0
-	m_currWins:	db "You won ", 0
-	m_currLoss:	db "You lost ", 0
-	m_currTies:	db "You tied ", 0
+	m_currWins:	db " won ", 0
+	m_currTies:	db "Games tied: ", 0
 	m_totGames:	db " out of ", 0
 	m_games:	db " games", 10, 0
-	m_playerMove:	db ", please make a move. ", 0	; The player's turn
-	m_compMove:	db " is making a move.", 0		; The computer's turn
+	m_playerMove:	db ", please make a move. ", 0		; The player's turn
+	m_compMove:	db " is making a move. ", 0		; The computer's turn
 	m_characterIs:	db " is ", 0
-	m_promptName:	db "Please enter your name : ", 0	; Prompt the only player for his name
+	m_promptName:	db "Please enter your name: ", 0	; Prompt the only player for his name
 	m_prompt1stName:db "Please enter player 1's name: ", 0	; Prompt player 1 for his name
 	m_prompt2ndName:db "Please enter player 2's name: ", 0	; Prompt player 2 for his name
-	m_promptMode:	db "Please select a game mode by entering the corresponing number: ", 10,
+	m_promptMode:	db "Please select a game mode by entering the corresponing number: ", 10
 			db "1) Play against an AI", 10
 			db "2) Play against another player", 10
-			db "3) Watch two AI duke it out", 10, 0
+			db "3) Watch two AI duke it out", 10
+			db ": ", 0 
+	m_playAgain:	db "Would you like to play again? ", 10
+			db "1 - Yes", 10
+			db "2 - No", 10, 0
 	currentSymb:	dd X_VAL		; Current playing symbol
 	wins:		dd 0			; Player wins
 	loss:		dd 0			; Player loss
@@ -171,6 +176,10 @@ main:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN main
 	call printf
 	add ESP, 4
 
+	push norm		; Normal Character set (just in case)
+	call printf
+	add ESP, 4
+
 	call choosePlayers	; choose which player goes first (also sets random seed for program)
 
 	call getMode
@@ -188,10 +197,13 @@ main:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN main
 pvaiInit:			; Initialize pvai cycle
 	call getName
 pvailoop:			; Player versus AI loop
-
+	
+	call gameInfo
 	call prettyPrint		; print original empty board
 
 .gameloop:
+	call turnInfo
+
 	mov EAX, [currentSymb]	;put current symbol in EAX
 	mov EBX, [playSymb]	;put player's symbol in EBX
 	cmp EAX, EBX		;check if player's turn or computer's turn
@@ -213,21 +225,21 @@ pvailoop:			; Player versus AI loop
 	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
 	cmp EAX, 0		; if game is still going, 
 	je .gameloop		; continue game loop
-	jmp exit		; For now, exit	
 
 	call endgame		; something to update scores, reset board, etc.
-	;call playAgain		; maybe? return value of 0 to continue? else to quit?
+	cmp EAX, 0
+	je exit
+	
 	call switchPlayers	; switch players' symbols
 	jmp pvailoop		; start new game
-
-.exit:
-	;call printScores	; a method to print final scores before exiting entirely
-	jmp exit		; exit program
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END PVAI LOOP
 
 aivailoop:			; AI versus AI game
 	call prettyPrint		; print original empty board
 
 .gameloop:
+	call turnInfo
+
 	mov EAX, [currentSymb]	;put current symbol in EAX
 	mov EBX, [playSymb]	;put player's symbol in EBX
 	cmp EAX, EBX		;check if player's turn or computer's turn
@@ -245,20 +257,19 @@ aivailoop:			; AI versus AI game
 	
 .bottom:
 	call switchTurn		; Switch who's turn it is
+	call gameInfo
 	call prettyPrint
 	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
 	cmp EAX, 0		; if game is still going, 
 	je .gameloop		; continue game loop
-	jmp exit		; For now, exit	
 
 	call endgame		; something to update scores, reset board, etc.
-	;call playAgain		; maybe? return value of 0 to continue? else to quit?
+	cmp EAX, 0
+	je exit
+
 	call switchPlayers	; switch players' symbols
 	jmp aivailoop		; start new game
-
-.exit:
-	;call printScores	; a method to print final scores before exiting entirely
-	jmp exit		; exit program
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END AIVAI LOOP
 
 pvpInit:
 	call getName
@@ -267,6 +278,7 @@ pvploop:			; Player versus player game
 	call prettyPrint	; print original empty board
 
 .gameloop:
+	call turnInfo
 	mov EAX, [currentSymb]	;put current symbol in EAX
 	mov EBX, [playSymb]	;put player's symbol in EBX
 	cmp EAX, EBX		;check if player's turn or computer's turn
@@ -290,13 +302,11 @@ pvploop:			; Player versus player game
 	je .gameloop		; continue game loop
 
 	call endgame		; something to update scores, reset board, etc.
-	;call playAgain		; maybe? return value of 0 to continue? else to quit?
-	;call switchPlayers	; switch players' symbols
-	;jmp pvploop		; start new game
-	jmp .exit
-.exit:
-	;call printScores	; a method to print final scores before exiting entirely
-	jmp exit		; exit program
+	cmp EAX, 0
+	je exit
+
+	call switchPlayers	; switch players' symbols
+	jmp pvploop		; start new game
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END main
 
 getInput:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getInput
@@ -318,9 +328,19 @@ getInput:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getInput
 .fail:
 	call prettyPrint
 
+	push red		; Make foreground red
+	call printf
+	add ESP, 4
+
 	push m_badBounds	; push out of bounds warning string to stack
 	call printf		; print warning to user
 	add ESP, 4		; adjust stack pointer
+
+	push black		; Make foreground black
+	call printf
+	add ESP, 4
+
+	call turnInfo
 	
 	jmp getInput		; Go to top of function
 
@@ -343,9 +363,19 @@ setSpot:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN setSpot
 .bad:
 	call prettyPrint
 
+	push red		; Make foreground red
+	call printf
+	add ESP, 4
+
 	push m_badSpot		; move warning string that space is occupied to stack
 	call printf		; print warning to user
 	add ESP, 4		; adjust stack pointer
+
+	push black		; Make foreground black
+	call printf
+	add ESP, 4
+
+	call turnInfo
 
 	call getInput		; Get input again
 
@@ -444,38 +474,29 @@ calcWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Begin calcWin
 	jmp .compWin		; Else go to computer win
 
 .compWin:			; if the computer won
-	push m_compWin		; Say it
-	call printf
-	add ESP, 4
+	mov [winner], DWORD 1
 
 	mov EAX, 1		; Return 1
 	jmp .end
 
 .playWin:			; if the player won
-	push m_playWin		; Print player message
-	call printf	
-	add ESP, 4
+	mov [winner], DWORD 2
 	
 	mov EAX, 2		; Return 2
 	jmp .end
 
 .tie:
-	push m_tieWin		; If it is a tie game
-	call printf		; Print tie message
-	add ESP, 4
-	
+	mov [winner], DWORD 3	
+
 	mov EAX, 3		; Return 3
 	jmp .end
 
 .noWin:
-	push newline		; Print empty newline
-	call printf		
-	add ESP, 4	
-
 	xor EAX, EAX		; Return 0	
 	jmp .end
 
-.end:	ret
+.end:	
+	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END calcWin
 
 checkWin:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
@@ -704,6 +725,8 @@ switchPlayers:;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN switchPlayers
 
 endgame:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; START endgame
 
+	mov EAX, [winner]
+
 	cmp EAX, 1		; See if the computer won
 	je .playerLost		
 	cmp EAX, 2		; See if the player won
@@ -729,8 +752,9 @@ endgame:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; START endgame
 	jmp .out		; Jump out of loop
 
 .out:				; Outside of if's
-	call reportStatistics	; Report statistics
-
+	call playAgain		; Decide if we play again
+	pushad			; Store result of that
+	
 	xor ECX, ECX		; Clear out ECX
 .top:				; Top of loop
 	cmp ECX, 9		; If ECX is < 8
@@ -745,11 +769,59 @@ endgame:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; START endgame
 	inc ECX			; Increment ECX
 	jmp .top		; Jump to top of loop
 
-.end: ret
+.end: 
+	popad			; Retrieve EAX
+	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END endgame
 
 reportStatistics:;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN reportStatistics
+	push clearScreen
+	call printf
+	add ESP, 4
+
+	call prettyPrint
+
+	mov EAX, [winner]
+	cmp EAX, 1
+	je .compWin
+	cmp EAX, 2
+	je .playerWin
+	jmp .tieWin
+
+.playerWin:
+	push pName
+	call printf
+	add ESP, 4
+
+	push m_winner
+	call printf
+	add ESP, 4
+	
+	jmp .stats
+
+.compWin:
+	push cName
+	call printf
+	add ESP, 4
+
+	push m_winner
+	call printf
+	add ESP, 4
+
+	jmp .stats
+
+.tieWin:
+	push m_tieWin
+	call printf
+	add ESP, 4
+
+.stats:
+
 	;;;;;;;;;;;;;;;;;;;;;;;;; Print wins
+	push pName
+	call printf
+	add ESP, 4
+
 	push m_currWins		; Push message to stack
 	call printf		; Call printf
 	add ESP, 4		; Adjust stack pointer
@@ -763,7 +835,11 @@ reportStatistics:;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN reportStatistics
 	call totalGames		; totalGames prints rest of message
 
 	;;;;;;;;;;;;;;;;;;;;;;;;; Print loss
-	push m_currLoss		; Push current loss message
+	push cName
+	call printf
+	add ESP, 4	
+
+	push m_currWins		; Push current win message
 	call printf		; Call printf
 	add ESP, 4		; Adjust stack pointer
 
@@ -816,33 +892,37 @@ totalGames:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN totalGames
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END totalGames
 
 prettyPrint:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN prettyPrint
-	push clearScreen
-	call printf
-	add ESP, 4
+;; Takes no arguments and has no return value
+;; Uses escape strings to do some schnazzy printing
+	push clearScreen	; Push clear screen esacpe string
+	call printf		; Call printf
+	add ESP, 4		; Adjust stack pointer
 
 	call gameInfo
-
-	push alt
+	
+	push alt		; Switch to alternate character set
 	call printf
 	add ESP, 4
 
-	call drawCell1
-	call drawCell2
-	call drawCell3
-	call drawCell4
-	call drawCell5
-	call drawCell6
-	call drawCell7
-	call drawCell8
-	call drawCell9
+	call drawCell1		; Draw cell 1
+	call drawCell2		; Draw cell 2
+	call drawCell3		; Draw cell 3
+	call drawCell4		; Draw cell 4
+	call drawCell5		; Draw cell 5
+	call drawCell6		; Draw cell 6
+	call drawCell7		; Draw cell 7
+	call drawCell8		; Draw cell 8
+	call drawCell9		; Draw cell 9
 
-	call drawBorders
+	call drawBorders	; Draw left and bottom border
 
-	push norm
+	push norm		; Switch to normal character set
 	call printf
 	add ESP, 4
 
-	call turnInfo
+	push newline		; Print a newline
+	call printf
+	add ESP, 4
 
 .exit:	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END prettyPrint
@@ -2266,10 +2346,13 @@ turnInfo:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN pvaiTurnInfo
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END turnInfo
 
 gameInfo:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN gameInfo
-	mov EAX, [playSymb]
-	cmp EAX, X_VAL
-	je .p1isX
-	jmp .p1isO
+;; Takes no input and returns nothing
+;; Prints basic game info (which player is which symbol)
+
+	mov EAX, [playSymb]	; Mov player's symbol in EAX
+	cmp EAX, X_VAL		; Check if player is X
+	je .p1isX		; If so, jump here
+	jmp .p1isO		; Else jump there
 
 .p1isX:
 	push pName
@@ -2423,6 +2506,31 @@ debugHERE:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN Debug here
 	popad			; Restore all registers
 	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END debugHERE
+
+playAgain:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN playAgain
+
+	call reportStatistics
+
+	push m_playAgain
+	call printf
+	add ESP, 4
+
+	push input
+	push f_int
+	call scanf
+	add ESP, 8
+
+	mov EAX, [input]
+	cmp EAX, 1
+	je .exit
+	cmp EAX, 2
+	je .xorEAX
+	call playAgain
+
+.xorEAX:
+	xor EAX, EAX
+.exit: ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END playAgain
 
 exit:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN exit
 	push norm		; push normal character set escape character to stack
