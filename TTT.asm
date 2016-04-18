@@ -43,6 +43,7 @@ SECTION .data
 	m_here:		db "HERE", 10, 0
 	m_promptIn:	db "Please enter a space to play", 10, 0	; Prompt Input Message
 	currentSymb:	dd X_VAL		; Current playing symbol
+	enemySymb:	dd O_VAL		; Not playing symbol
 	firstTurn:	dd 0			; 0 if first turn, 1 if not
 
 SECTION .text
@@ -333,136 +334,362 @@ computer:
 	ret			;exit function
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END computer
 
-;;Takes EBX as input.  EBX holds current symbol being checked
+;;Takes EBX as input.  EBX holds current symbol being checked;;
+;;Returns location 1-9 for placement or 0 if no spot found in EDX;;
 calcWinMove:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
-;;HAS NOT BEEN UPDATED TO WORK WITH COUNTER YET;;
+;;BEING UPDATED TO WORK WITH COUNTER;;
+
+;;;;;;;;;;;;;;;;;BEGIN AREA CHECK;;;;;;;;;;;;;;;;;;
 .topRow:
+	xor ECX, ECX		; Set spaces counter to 0
+
+.tr1:
 	mov EAX, [board]	; Top left cell
-	cmp EAX, EBX
-	jne .centRow
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .tr2		; move to next
 
+	cmp EAX, 0		; if not 0 either, must be other symbol
+	jne .centRow		; begin next area check
+	
+	mov EDX, 1		; store location of empty space
+	inc ECX			; increment space counter
+
+.tr2:	
 	mov EAX, [board + 4]	; Top center cell
-	cmp EAX, EBX
-	jne .centRow
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .tr3		; move to next	
 
+	cmp EAX, 0		; if not 0 either, must be other symbol
+	jne .centRow		; begin next area check
+
+	cmp ECX, 0		; find value of space counter
+	jg  .centRow		; if greater than 0, move to next check (multiple spaces found)
+
+	mov EDX, 2		; store location of empty space
+	inc ECX			; increment space counter
+
+.tr3:
 	mov EAX, [board + 8]	; Top right cell
-	cmp EAX, EBX
-	jne .centRow
-	jmp .win
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .found		; space has been found previously
+	
+	cmp EAX, 0		; if not 0 either, must be other symbol
+	jne .centRow		; begin next area check
 
+	cmp ECX, 0		; find value of space counter
+	jg  .centRow		; if greater than 0, move to next check (multiple spaces found)
+	
+	mov EDX, 3		; store location of empty space
+	inc ECX			; increment space counter
+
+	jmp .found		; space has been found
+	
+;;;;;;;;;;;;;;;;;;BEGIN NEXT AREA CHECK;;;;;;;;;;;;;;;;;;;;
 .centRow:
+	xor ECX, ECX		; Set space counter to 0
+.cr1:
 	mov EAX, [board + 12]	; Middle left cell
-	cmp EAX, EBX
-	jne .botRow
+	cmp EAX, EBX		; If equal to selected symbol,
+	je .cr2			; move to next
 
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .botRow		; begin next area check
+
+	mov EDX, 4		; store location of empty space
+	inc ECX			; increment space counter
+
+.cr2:
 	mov EAX, [board + 16]	; Middle center cell
-	cmp EAX, EBX
-	jne .botRow
+	cmp EAX, EBX		; If equal to selected symbol
+	je .cr3			; move to next
 
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .botRow		; begin next area check
+	
+	cmp ECX, 0		; find value of space counter
+	jg  .botRow		; if greater than 0, move to next cehck (multiple spaces found)
+
+	mov EDX, 5		; store location of empty space
+	inc ECX			; increment space counter
+
+.cr3:
 	mov EAX, [board + 20]	; Middle right cell
-	cmp EAX, EBX
-	jne .botRow
-	jmp .win
+	cmp EAX, EBX		; If equal to selected symbol,
+	je .found		; move to area check
+	
+	cmp EAX, 0		; if not 0 either, must be other symbol
+	jne .botRow		; begin next area check
 
+	cmp ECX, 0		; find value of space counter
+	jg  .botRow		; if greater than 0, move to next check (multiple spaces found)
+	
+	mov EDX, 6		; store location of empty space
+	inc ECX			; increment space counter
+
+	jmp .found
+
+;;;;;;;;;;;;;;;BEGIN NEXT AREA CHECK;;;;;;;;;;;;;;;;;
 .botRow:
-	mov EAX, [board + 24]	; Middle left cell
-	cmp EAX, EBX
-	jne .leftCol
+	xor ECX, ECX		; set space counter back to 0
+.br1:
+	mov EAX, [board + 24]	; Bottom left cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je .br2			; move to next
 
-	mov EAX, [board + 28]	; Middle center cell
-	cmp EAX, EBX
-	jne .leftCol
+	cmp EAX, 0		; if not 0 either, must be other symbol
+	jne .leftCol		; begin next area check
+	
+	mov EDX, 7		; store location of empty space
+	inc ECX			; increment space counter
+.br2:
+	mov EAX, [board + 28]	; Bottom center cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je .br3			; move to next
 
-	mov EAX, [board + 32]	; Middle right cell
-	cmp EAX, EBX
-	jne .leftCol
-	jmp .win
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .leftCol		; begin next area check
 
+	cmp ECX, 0		; find value of space counter
+	jg .botRow		; if greater than 0, move to next check (multiple spaces found)
 
+	mov EDX, 8		; store location of empty space
+	inc ECX			; increment space counter
+.br3:
+	mov EAX, [board + 32]	; Bottom right cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je .found		; move to area check
+	
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .leftCol		; begin next area check
+
+	cmp ECX, 0		; Find value of space counter
+	jg  .leftCol		; if greater than 0, move to next check (multiple spaces found)
+
+	mov EDX, 9		; store location of empty space
+	inc ECX			; increment space counter
+
+	jmp .found
+
+;;;;;;;;;;;;;;;;BEGIN NEXT AREA CHECK;;;;;;;;;;;;;;;
 .leftCol:
-	mov EAX, [board]	; Middle left cell
-	cmp EAX, EBX
-	jne .centCol
+	xor ECX, ECX		; set space counter back to 0
+.lc1:
+	mov EAX, [board]	; Top left cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .lc2		; move to next
+	
+	cmp EAX, 0		; if not 0 either, must be other symbol
+	jne .centCol		; begin next area check
 
-	mov EAX, [board + 12]	; Middle center cell
-	cmp EAX, EBX
-	jne .centCol
+	mov EDX, 1		; store location of empty space
+	inc ECX			; increment space counter
+.lc2:
+	mov EAX, [board + 12]	; Middle left cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .lc3		; move to next
 
-	mov EAX, [board + 24]	; Middle right cell
-	cmp EAX, EBX
-	jne .centCol
-	jmp .win
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .centCol		; begin next area check
 
+	cmp ECX, 0		; find value of space counter
+	jg .centCol		; if greater than 0, move to next check (multiple spaces found)
+
+	mov EDX, 4		; store location of empty space
+	inc ECX			; increment space counter
+.lc3:
+	mov EAX, [board + 24]	; Bottom left cell
+	cmp EAX, EBX		; If equal to selected symbol
+	je .found		; free space has been found
+
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .centCol		; begin next area check
+	
+	cmp ECX, 0		; Find value of space counter
+	jg  .centCol		; if greater than 0, move to next check (multiple spaces found)
+	
+	mov EDX, 7		; store location of empty space
+	inc ECX			; increment space counter
+
+	jmp .found
+	
+;;;;;;;;;;;;;;;BEGIN NEXT AREA CHECK;;;;;;;;;;;;;;;;;;
 .centCol:
-	mov EAX, [board + 4]	; Middle left cell
-	cmp EAX, EBX
-	jne .rightCol
+	xor ECX, ECX		; reset space counter
+.cc1:
+	mov EAX, [board + 4]	; Top Middle cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .cc2		; move to next
 
-	mov EAX, [board + 16]	; Middle center cell
-	cmp EAX, EBX
-	jne .rightCol
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .rightCol		; begin next area check
 
-	mov EAX, [board + 28]	; Middle right cell
-	cmp EAX, EBX
-	jne .rightCol
-	jmp .win
+	mov EDX, 2		; store location of empty space
+	inc ECX
+.cc2:
+	mov EAX, [board + 16]	; Middle Center cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .cc3		; move to next
 
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .rightCol		; begin next area check
 
+	cmp ECX, 0		; Find value of space counter
+	jg  .rightCol		; if greater than 0, move to next check (multiple spaces found)
+
+	mov EDX, 5		; store location of empty space
+	inc ECX			; increment space counter
+.cc3:
+	mov EAX, [board + 28]	; Bottom Middle cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .found		; free space has been found previously
+
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .rightCol		; begin next area check
+
+	cmp ECX, 0		; Find value of space counter
+	jg  .rightCol		; if greater than 0, move to next check (multiple spaces found)
+	
+	mov EDX, 8		; store location of empty space
+	inc ECX			; increment space counter
+	
+	jmp .found		; return location found
+
+;;;;;;;;;;;;;;;;BEGIN NEXT AREA CHECK;;;;;;;;;;;;;;;;;
 .rightCol:
-	mov EAX, [board + 8]	; Middle left cell
-	cmp EAX, EBX
-	jne .lrDi
+	xor ECX, ECX		; reset space counter
+.rc1:
+	mov EAX, [board + 8]	; Top Right cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .rc2		; move to next
 
-	mov EAX, [board + 20]	; Middle center cell
-	cmp EAX, EBX
-	jne .lrDi
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .lrDi		; begin next area check
 
-	mov EAX, [board + 32]	; Middle right cell
-	cmp EAX, EBX
-	jne .lrDi
-	jmp .win
+	mov EDX, 3		; store location of empty space
+	inc ECX			; increment space counter
+.rc2:
+	mov EAX, [board + 20]	; Middle Right cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je .rc3			; move to next
 
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .lrDi		; begin next area check
+	
+	cmp ECX, 0		; Find value of space counter
+	jg  .lrDi		; if greater than 0, move to next check (multiple spaces found)
+
+	mov EDX, 6		; store location of empty space
+	inc ECX			; increment space counter
+
+.rc3:
+	mov EAX, [board + 32]	; Bottom right cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je .found		; space has been found previously
+
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .lrDi		; begin next area check
+
+	cmp ECX, 0		; find value of space counter
+	jg  .lrDi		; if greater than 0, move to next check (multiple spaces found)
+
+	mov EDX, 9		; store location of empty space
+	inc ECX			; increment space counter
+
+	jmp .found		; return location found
+
+;;;;;;;;;;;;;;;;BEGIN NEXT AREA CHECK;;;;;;;;;;;;;;;;;
 .lrDi:
-	mov EAX, [board]	; Middle left cell
-	cmp EAX, EBX
-	jne .rlDi
+	xor ECX, ECX		; reset space counter
+.lr1:
+	mov EAX, [board]	; Top left cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .lr2		; move to next
 
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .rlDi		; begin next area check
+
+	mov EDX, 1		; store location of empty space
+	inc ECX			; increment space counter
+.lr2:
 	mov EAX, [board + 16]	; Middle center cell
-	cmp EAX, EBX
-	jne .rlDi
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .lr3		; move to next
 
-	mov EAX, [board + 32]	; Middle right cell
-	cmp EAX, EBX
-	jne .rlDi
-	jmp .win
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .rlDi		; begin next area check
 
+	cmp ECX, 0		; Find value of space counter
+	jg  .rlDi		; if greater than 0, move to next check (multiple spaces found)
 
+	mov EDX, 5		; store location of empty space
+	inc ECX			; increment space counter
+.lr3:
+	mov EAX, [board + 32]	; Bottom right cell
+	cmp EAX, EBX		; If equal to selected symbol,
+	je  .found		; space has been found previously
+
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .rlDi		; begin next area check
+
+	cmp ECX, 0		; find value of space counter
+	jg  .rlDi		; if greater than 0, move to next check (multiple spaces found)
+
+	mov EDX, 9		; store location of empty space
+	inc ECX			; increment space counter
+	
+	jmp .found		; return location found
+
+;;;;;;;;;;;;;;;;;BEGIN NEXT AREA CHECK;;;;;;;;;;;;;;;;
 .rlDi:
-	mov EAX, [board + 8]	; Middle left cell
-	cmp EAX, EBX
-	jne .fail
+	xor ECX, ECX		; reset space counter
+.rl1:
+	mov EAX, [board + 8]	; Top right cell
+	cmp EAX, EBX		; If equal to selected symbol
+	je  .rl2		; move to next
 
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .notFound		; no winning move found
+
+	mov EDX, 3		; store location of empty space
+	inc ECX			; increment space counter
+.rl2:
 	mov EAX, [board + 16]	; Middle center cell
-	cmp EAX, EBX
-	jne .fail
+	cmp EAX, EBX		; if equal to selected symbol
+	je  .rl3		; move ot next
 
-	mov EAX, [board + 24]	; Middle right cell
-	cmp EAX, EBX
-	jne .fail
-	jmp .win
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .notFound		; not winning move found
 
+	cmp ECX, 0		; Find value of space counter
+	jg  .notFound		; If greater than 0, move to next check (multiple spaces found
 
-.fail:
-	xor EAX, EAX
+	mov EDX, 5		; store location of empty space
+	inc ECX			; increment space counter
+.rl3:
+	mov EAX, [board + 24]	; Bottom left cell
+	cmp EAX, EBX		; If equal to selected symbol
+	jne .found		; free space found previously
+	
+	cmp EAX, 0		; If not 0 either, must be other symbol
+	jne .notFound		; no winning move found
+
+	cmp ECX, 0		; Find value of space counter
+	jg  .notFound		; no winning move found (multiple spaces found)
+
+	mov EDX, 7		; store location of empty space
+	inc ECX			; increment space counter
+
+	jmp .found		; return free space
+
+;;;;;;;;;;;;;;;;;END CONDITIONS;;;;;;;;;;;;;;;;
+.notFound:
+	xor EDX, EDX
 	jmp .end
-.win:
-	mov EAX, 1
+.found:
 	jmp .end
 	
 .end:	ret
 
-.increment:
-	inc ECX		;increment counter
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END checkWin
 
 
@@ -727,18 +954,10 @@ choosePlayers:;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN choosePlayers
 switchTurn:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN switchTurn
 ;; This function takes no input and switches the value in currentSymb ;; 
 	mov	EAX, [currentSymb]	;load current symbol into EAX
-	cmp	EAX, X_VAL		;if current symbol is x,
-	je	.switchx		;go to switch that X to an O
+	mov	EBX, [enemySymb]	;load not playing symbol into EBX
+	mov	[currentSymb], EBX	;load new playing symbol into currentSymb
+	mov	[enemySymb], EAX	;load old playing symbol into enemySymb
 
-	mov	EAX, X_VAL		;else, load X value into EAX
-	mov	[currentSymb], EAX	;set current symbol to X
-	jmp	.end			;return
-
-.switchx:
-	mov	EAX, O_VAL		;if current symbol is X, load O value into EAX
-	mov	[currentSymb], EAX	;set current symbol to O
-	
-.end:
 	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END switchTurn
 
