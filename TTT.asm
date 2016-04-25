@@ -215,14 +215,8 @@ pvailoop:			; Player versus AI loop
 	call getInput		; get user input for move placement
 	jmp .bottom
 
-<<<<<<< HEAD
 .computer:
-	;currently the same as .player since no placement algorithm
 	call computer		; get user input for move placement
-=======
-.computer:			; AI's turn
-	call getInput		; get user input for move placement
->>>>>>> 4ad6cbcb9afc8c2b3ea9320ab70f4f0d5149714e
 	jmp .bottom
 	
 .bottom:
@@ -257,12 +251,7 @@ aivailoop:			; AI versus AI game
 	jmp .bottom
 
 .computer:
-<<<<<<< HEAD
-	;currently the same as .player since no placement algorithm
 	call computer		; get user input for move placement
-=======
-	call getInput		; get user input for move placement
->>>>>>> 4ad6cbcb9afc8c2b3ea9320ab70f4f0d5149714e
 	jmp .bottom
 	
 .bottom:
