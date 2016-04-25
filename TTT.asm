@@ -347,6 +347,8 @@ getInput:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getInput
 
 ;;Takes EAX as parameter;;
 setSpot:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN setSpot
+	mov [input], EAX
+
 	dec EAX			; adjust input for array indexing
 	xor EDX, EDX		; set EDX to 0 before multiplication
 	imul EAX, 4		; multiply EAX by 4 due to 4-byte blocks of integers in array
@@ -359,6 +361,7 @@ setSpot:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN setSpot
 	mov EBX, [currentSymb]	; mov the player's symbol into EBX
 	mov [board + EAX], EBX  ; set board spot to player's symbol
 	jmp .end		; ret
+
 .bad:
 	call prettyPrint
 
