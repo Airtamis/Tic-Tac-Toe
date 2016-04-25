@@ -218,7 +218,7 @@ pvailoop:			; Player versus AI loop
 
 .computer:
 	;currently the same as .player since no placement algorithm
-	call getInput		; get user input for move placement
+	call computer		; get user input for move placement
 	jmp .bottom
 	
 .bottom:
@@ -249,12 +249,12 @@ aivailoop:			; AI versus AI game
 	jmp .computer
 
 .player:
-	call getInput		; get user input for move placement
+	call computer		; get user input for move placement
 	jmp .bottom
 
 .computer:
 	;currently the same as .player since no placement algorithm
-	call getInput		; get user input for move placement
+	call computer		; get user input for move placement
 	jmp .bottom
 	
 .bottom:
@@ -449,18 +449,30 @@ printBoard:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN printBoard
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN computer
 computer:
+	xor ECX, ECX
+.wait:
+	NOP
+	inc ECX
+	cmp ECX, 1000000000
+	jne .wait
+
+.checkFirst:
+	mov EAX, [currentSymb]
+	cmp EAX, O_VAL
+	je  .checkWins	
+
 	mov EAX, [firstTurn]	;check if first turn
 	cmp EAX, 0		;if equal, first turn
 	je  .first		;calculate random spot to move and go there
 	
 ;if not the first move, check if winning moves exist for computer or player
 .checkWins:
-	mov EBX, [compSymb]
+	mov EBX, [currentSymb]
 	call calcWinMove	;check if computer has winning move	
 	cmp EAX, 0		;if 0, no move was found
 	jne .makeMove		;if not 0, make the move found
 
-	mov EBX, [playSymb]
+	mov EBX, [enemySymb]
 	call calcWinMove	;check if player has winning move
 	cmp EAX, 0		;if 0, no move was found
 	jne .makeMove		;if not 0, make the move found
@@ -468,10 +480,12 @@ computer:
 ;if no winning moves, continue to main algorithm to 
 .findMove:
 	;main algorithm should go here
+	call getInput
+	jmp .exit
 
 .makeMove:
 	call setSpot		;set spot (takes EAX as parameter)
-
+	jmp  .exit
 .first:
 	call rand		;store random value in EAX
 	xor EDX, EDX		;set EDX to 0 to prepare for division
@@ -488,7 +502,6 @@ computer:
 ;;Takes EBX as input.  EBX holds current symbol being checked;;
 ;;Returns location 1-9 for placement or 0 if no spot found in EDX;;
 calcWinMove:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
-;;BEING UPDATED TO WORK WITH COUNTER;;
 
 ;;;;;;;;;;;;;;;;;BEGIN AREA CHECK;;;;;;;;;;;;;;;;;;
 .topRow:
@@ -601,7 +614,7 @@ calcWinMove:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
 	jne .leftCol		; begin next area check
 
 	cmp ECX, 0		; find value of space counter
-	jg .botRow		; if greater than 0, move to next check (multiple spaces found)
+	jg .leftCol		; if greater than 0, move to next check (multiple spaces found)
 
 	mov EDX, 8		; store location of empty space
 	inc ECX			; increment space counter
@@ -809,7 +822,7 @@ calcWinMove:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
 	je  .rl3		; move ot next
 
 	cmp EAX, 0		; If not 0 either, must be other symbol
-	jne .notFound		; not winning move found
+	jne .notFound		; no winning move found
 
 	cmp ECX, 0		; Find value of space counter
 	jg  .notFound		; If greater than 0, move to next check (multiple spaces found
@@ -834,9 +847,10 @@ calcWinMove:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
 
 ;;;;;;;;;;;;;;;;;END CONDITIONS;;;;;;;;;;;;;;;;
 .notFound:
-	xor EDX, EDX
+	xor EAX, EAX		;return 0 in EAX
 	jmp .end
 .found:
+	mov EAX, EDX		;put return value in EAX
 	jmp .end
 	
 .end:	ret
@@ -1100,6 +1114,11 @@ switchTurn:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN switchTurn
 	mov	[currentSymb], EBX	;load new playing symbol into currentSymb
 	mov	[enemySymb], EAX	;load old playing symbol into enemySymb
 
+	mov	EAX, [firstTurn]	;set firstTurn to 1, since no longer first
+	inc	EAX
+	mov	[firstTurn], EAX
+
+
 	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END switchTurn
 
@@ -1114,6 +1133,12 @@ switchPlayers:;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN switchPlayers
 	mov	EAX, X_VAL		;store X value in EAX
 	mov	[currentSymb], EAX	;update currentSymb to be X for new game
 	
+	mov	EAX, 0			;set first turn to 0 since it's true now
+	mov	[firstTurn], EAX
+
+	mov	EAX, O_VAL		;reset enemy symbol
+	mov	[enemySymb], EAX
+
 	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END switchPlayers
 
