@@ -43,7 +43,7 @@ SECTION .data
 	X:		db "X", 0		; X
 	O:		db "O", 0		; Y
 	E:		db " ", 0		; Space
-	a:		db "a", 0
+	a:		db "a", 0		; a
 	pName:		db "Dave"		; Player/Player1/Computer1 Name
 			times 100-$+pName db 0	; Reserve enough room in pName for 100 characters total
 	cName:		db "Hal"		; Computer/Player2/Computer2 Name
@@ -53,14 +53,13 @@ SECTION .data
 	m_tieWin:	db "Tie game!", 10, 0	; Tie Game Message
 	m_winner:	db " is the winner!", 10, 0		; Is the winner message
 	m_anyKey:	db "Press enter to continue. ", 0	; Press enter to continue
-	m_here:		db "HERE", 10, 0
-	m_currWins:	db " won ", 0
-	m_currTies:	db "Games tied: ", 0
-	m_totGames:	db " out of ", 0
-	m_games:	db " games", 10, 0
+	m_currWins:	db " won ", 0				; x Won y games
+	m_currTies:	db "Games tied: ", 0			; Games tied message
+	m_totGames:	db " out of ", 0			; y games out of total games
+	m_games:	db " games", 10, 0			; Games
 	m_playerMove:	db ", please make a move. ", 0		; The player's turn
 	m_compMove:	db " is making a move. ", 0		; The computer's turn
-	m_characterIs:	db " is ", 0
+	m_characterIs:	db " is ", 0				; is
 	m_promptName:	db "Please enter your name: ", 0	; Prompt the only player for his name
 	m_prompt1stName:db "Please enter player 1's name: ", 0	; Prompt player 1 for his name
 	m_prompt2ndName:db "Please enter player 2's name: ", 0	; Prompt player 2 for his name
@@ -148,16 +147,16 @@ SECTION .data
 	lft14:		db 27, "[16;1H", 0
 	lft15:		db 27, "[17;1H", 0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END CELL ESCAPES
-	solidRow:	db "aaaaa", 0
-	xRow1:		db "\  /a", 0
-	xRow2:		db " \/ a", 0
-	xRow3:		db " /\ a", 0
-	xRow4:		db "/  \a", 0
-	oRow1:		db " ff a", 0
-	oRow2:		db "f  fa", 0
-	oRow3:		db "f  fa", 0
-	oRow4:		db " ff a", 0
-	ePrint:		db "    a", 0
+	solidRow:	db "aaaaa", 0		; A solid row
+	xRow1:		db "\  /a", 0		; First x row
+	xRow2:		db " \/ a", 0		; Second x row
+	xRow3:		db " /\ a", 0		; Third x row
+	xRow4:		db "/  \a", 0		; Fourth x row
+	oRow1:		db " ff a", 0		; First circle row
+	oRow2:		db "f  fa", 0		; Second circle row
+	oRow3:		db "f  fa", 0		; Third circle row
+	oRow4:		db " ff a", 0		; Fourth circle row
+	ePrint:		db "    a", 0		; Printing for empty cell
 	enemySymb:	dd O_VAL		; Not playing symbol
 	firstTurn:	dd 0			; 0 if first turn, 1 if not
 
@@ -184,60 +183,65 @@ main:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN main
 
 	call choosePlayers	; choose which player goes first (also sets random seed for program)
 
-	call getMode
+	call getMode		; Prompts the player for game type
 
-	mov EAX, [mode]
+	mov EAX, [mode]		; Move the answer into EAX
 
-	cmp EAX, PVAI
-	je pvaiInit
-	cmp EAX, PVP
-	je pvpInit
-	cmp EAX, AIVAI
-	je aivailoop
+	cmp EAX, PVAI		; See if they chose pvai
+	je pvaiInit		; Start pvai game
+	cmp EAX, PVP		; See if they cose pvp
+	je pvpInit		; Start pvp game
+	cmp EAX, AIVAI		; See if they chose aivai game
+	je aivailoop		; Start aivai game
 	;jmp to get mode again
 
 pvaiInit:			; Initialize pvai cycle
-	call getName
+	call getName		; Get the player's anme
 pvailoop:			; Player versus AI loop
 	
-	call gameInfo
-	call prettyPrint		; print original empty board
+	call gameInfo		; Print who is who
+	call prettyPrint	; print original empty board
 
-.gameloop:
+.gameloop:			; Start of the game loop
 	call turnInfo
 
 	mov EAX, [currentSymb]	;put current symbol in EAX
 	mov EBX, [playSymb]	;put player's symbol in EBX
 	cmp EAX, EBX		;check if player's turn or computer's turn
-	je  .player
+	je  .player		
 	jmp .computer
 
-.player:
+.player:			; player's turn
 	call getInput		; get user input for move placement
 	jmp .bottom
 
+<<<<<<< HEAD
 .computer:
 	;currently the same as .player since no placement algorithm
 	call computer		; get user input for move placement
+=======
+.computer:			; AI's turn
+	call getInput		; get user input for move placement
+>>>>>>> 4ad6cbcb9afc8c2b3ea9320ab70f4f0d5149714e
 	jmp .bottom
 	
 .bottom:
 	call switchTurn		; switch who's turn it is
-	call prettyPrint
+	call prettyPrint	; Print board again
 	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
 	cmp EAX, 0		; if game is still going, 
 	je .gameloop		; continue game loop
 
 	call endgame		; something to update scores, reset board, etc.
-	cmp EAX, 0
-	je exit
+	cmp EAX, 0		; See if player chose not to continue
+	je exit			; If so, exit
 	
 	call switchPlayers	; switch players' symbols
 	jmp pvailoop		; start new game
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END PVAI LOOP
 
 aivailoop:			; AI versus AI game
-	call prettyPrint		; print original empty board
+	call prettyPrint	; print original empty board
 
 .gameloop:
 	call turnInfo
@@ -253,14 +257,18 @@ aivailoop:			; AI versus AI game
 	jmp .bottom
 
 .computer:
+<<<<<<< HEAD
 	;currently the same as .player since no placement algorithm
 	call computer		; get user input for move placement
+=======
+	call getInput		; get user input for move placement
+>>>>>>> 4ad6cbcb9afc8c2b3ea9320ab70f4f0d5149714e
 	jmp .bottom
 	
 .bottom:
 	call switchTurn		; Switch who's turn it is
-	call gameInfo
-	call prettyPrint
+	call gameInfo		; Print who is who
+	call prettyPrint	; Print the board
 	call calcWin		; returns 0 if game is still going; 1,2,or 3 if ended
 	cmp EAX, 0		; if game is still going, 
 	je .gameloop		; continue game loop
@@ -274,13 +282,13 @@ aivailoop:			; AI versus AI game
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END AIVAI LOOP
 
 pvpInit:
-	call getName
-	call getOtherName
+	call getName		; Get player 1's name
+	call getOtherName	; Get player 2's name
 pvploop:			; Player versus player game
 	call prettyPrint	; print original empty board
 
 .gameloop:
-	call turnInfo
+	call turnInfo		; Print who's turn it is
 	mov EAX, [currentSymb]	;put current symbol in EAX
 	mov EBX, [playSymb]	;put player's symbol in EBX
 	cmp EAX, EBX		;check if player's turn or computer's turn
@@ -292,7 +300,6 @@ pvploop:			; Player versus player game
 	jmp .bottom
 
 .computer:
-	;currently the same as .player since no placement algorithm
 	call getInput		; get user input for move placement
 	jmp .bottom
 	
@@ -2916,15 +2923,6 @@ getMode:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getMode
 
 .exit	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END getMode
-
-debugHERE:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN Debug here
-	pushad			; Store all registers
-	push m_here		; Push message onto stack
-	call printf		; Print here
-	add ESP, 4		; Adjust stack pointer
-	popad			; Restore all registers
-	ret
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END debugHERE
 
 playAgain:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN playAgain
 
