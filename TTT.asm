@@ -873,7 +873,7 @@ calcWinMove:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
 .rl3:
 	mov EAX, [board + 24]	; Bottom left cell
 	cmp EAX, EBX		; If equal to selected symbol
-	jne .found		; free space found previously
+	je .found		; free space found previously
 	
 	cmp EAX, 0		; If not 0 either, must be other symbol
 	jne .notFound		; no winning move found
