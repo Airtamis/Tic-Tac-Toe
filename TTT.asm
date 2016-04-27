@@ -75,7 +75,7 @@ SECTION .data
 	wins:		dd 0			; Player wins
 	loss:		dd 0			; Player loss
 	ties:		dd 0			; Ties
-
+	debug:		db "Not Found", 10, 0
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; CELL ONE ESCAPES
 	cell1Start:	db 27, "[3;2H", 0
 	cell1_2:	db 27, "[4;2H", 0
@@ -479,8 +479,50 @@ computer:
 ;if no winning moves, continue to main algorithm to 
 .findMove:
 	;main algorithm should go here
-	call getInput
-	jmp .exit
+	mov EAX, [input]
+	cmp EAX, 1
+	je .counterCorner
+	cmp EAX, 3
+	je .counterCorner
+	cmp EAX, 7
+	je .counterCorner
+	cmp EAX, 9
+	je .counterCorner
+	cmp EAX, 5
+	je .counterCenter
+	jmp .counterSide
+
+.counterCorner:
+	call tryCenter
+	cmp EAX, 0
+	jne .makeMove
+
+	call tryCorner
+	cmp EAX, 0
+	jne .makeMove
+
+	call trySide
+	jmp .makeMove
+
+.counterCenter:
+	call tryCorner
+	cmp EAX, 0
+	jne .makeMove	
+	
+	call trySide
+	jmp .makeMove
+
+.counterSide:
+	call tryCorner
+	cmp EAX, 0
+	jne .makeMove
+
+	call tryCenter
+	cmp EAX, 0
+	jne .makeMove
+
+	call trySide
+	jmp .makeMove
 
 .makeMove:
 	call setSpot		;set spot (takes EAX as parameter)
@@ -2997,7 +3039,7 @@ tryCorner:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN tryCorner
 
 tryCenter:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN tryCenter
 
-	mov EAX, [board + 16]	; Move the cneter cell into EAX
+	mov EAX, [board + 16]	; Move the center cell into EAX
 	cmp EAX, 0		; Check and see if the center cell is empty
 	jne .fail		; If not, fail
 
@@ -3009,6 +3051,224 @@ tryCenter:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN tryCenter
 
 .exit:	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END tryCenter
+
+trySide:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN trySide
+	xor EDX, EDX		;holds found move location
+	mov ECX, [input]	;holds last move
+	
+	;Find last move made
+	cmp ECX, 1
+	je  .1
+	cmp ECX, 2
+	je  .2
+	cmp ECX, 3
+	je  .3
+	cmp ECX, 4
+	je  .4
+	cmp ECX, 5
+	je  .5
+	cmp ECX, 6
+	je  .6
+	cmp ECX, 7
+	je  .7
+	cmp ECX, 8
+	jne .9
+	jmp .8
+
+.1:	;check in order 2,4,6,8
+	call .top
+	cmp  EDX, 0
+	jne  .decision
+
+	call .left
+	cmp  EDX, 0
+	jne  .decision	
+
+	call .right
+	cmp  EDX, 0
+	jne  .decision
+
+	call .bottom
+	cmp  EDX, 0
+	jne  .decision
+
+	jmp  .fail
+
+.2:	;check in order 4,6,8
+	call .left
+	cmp EDX, 0
+	jne .decision
+
+	call .right
+	cmp EDX, 0
+	jne .decision
+
+	call .bottom
+	cmp EDX, 0
+	jne .decision
+
+	jmp .fail
+
+.3:	;check in order 2,6,4,8
+	call .top
+	cmp EDX, 0
+	jne .decision
+
+	call .right
+	cmp EDX, 0
+	jne .decision	;if spot stored, return it
+	
+	call .left	
+	cmp EDX, 0
+	jne .decision	;if spot stored, return it
+
+	call .bottom
+	cmp EDX, 0
+	jne .decision	;if spot stored, return it
+
+	jmp .fail
+
+.4:	;check in order 2,8,6
+	call .top
+	cmp EDX, 0
+	jne .decision
+
+	call .bottom
+	cmp EDX, 0
+	jne .decision
+
+	call .right
+	cmp EDX, 0
+	jne .decision
+
+	jmp .fail
+
+.5:	;check in order 2,4,6,8
+	call .top
+	cmp EDX, 0
+	jne .decision
+
+	call .left
+	cmp EDX, 0
+	jne .decision
+	
+	call .right
+	cmp EDX, 0
+	jne .decision
+
+	call .bottom
+	cmp EDX, 0
+	jne .decision
+
+	jmp .fail
+
+.6:	;check in order 2,8,4
+	call .top
+	cmp EDX, 0
+	jne .decision
+
+	call .bottom
+	cmp EDX, 0
+	jne .decision
+
+	call .left
+	cmp EDX, 0
+	jne .decision
+
+	jmp .fail
+
+.7:	;check in order 4,8,2,6
+	call .left
+	cmp EDX, 0
+	jne .decision
+
+	call .bottom
+	cmp EDX, 0
+	jne .decision
+
+	call .top
+	cmp EDX, 0
+	jne .decision
+
+	call .right
+	cmp EDX, 0
+	jne .decision
+
+	jmp .fail
+
+.8:	;check in order 4,6, 2
+	call .left
+	cmp EDX, 0
+	jne .decision
+
+	call .right
+	cmp EDX, 0
+	jne .decision
+	
+	call .top
+	cmp EDX, 0
+	jne .decision
+
+	jmp .fail
+
+.9:	;check in order 6,8,2,4
+	call .right
+	cmp EDX, 0
+	jne .decision
+
+	call .bottom
+	cmp EDX, 0
+	jne .decision
+
+	call .top
+	cmp EDX, 0
+	jne .decision
+
+	call .left
+	cmp EDX, 0
+	jne .decision
+
+	jmp .fail
+
+.top:	;check if top side is free
+	mov EAX, [board+4]	
+	cmp EAX, 0
+	jne .exit
+	
+	mov EDX, 2
+	ret
+.left:	;check if left side is free
+	mov EAX, [board+12]
+	cmp EAX, 0
+	jne .exit
+
+	mov EDX, 4
+	ret
+.right:	;check if right side is free
+	mov EAX, [board+20]
+	cmp EAX, 0
+	jne .exit
+
+	mov EDX, 6
+	ret
+.bottom:;check if bottom side is free
+	mov EAX, [board+28]
+	cmp EAX, 0
+	jne .exit
+
+	mov EDX, 8
+	ret
+
+.decision:
+	mov EAX, EDX	;put found move in EAX
+	jmp .exit	;return move in EAX
+
+.fail:
+	xor EAX, EAX	;return 0
+	jmp .exit
+
+.exit: ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END trySide
 
 exit:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN exit
 	push norm		; push normal character set escape character to stack
