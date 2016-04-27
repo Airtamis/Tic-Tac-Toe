@@ -2941,6 +2941,75 @@ playAgain:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN playAgain
 .exit: ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END playAgain
 
+tryCorner:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN tryCorner
+;; Takes no input
+;; WIll return 0 if no move possible, or 1, 3, 7, or 9 for the move to make
+	xor ECX, ECX		; ECX will count empty spaces
+	xor EDX, EDX		; EBX will store index of non-empty space
+
+.countFirstC:			; Count first corner
+	mov EAX, [board]	; Move top-left corner into EAX
+	cmp EAX, 0		; Check if EAX is empty
+	jne .countSecondC	; If not, go count second corner
+
+	inc ECX			; Increment counter
+	mov EDX, 1		; Store top-left corner in EDX
+
+.countSecondC:			; Count second corner
+	mov EAX, [board + 8]	; Move top-right corner into EAX
+	cmp EAX, 0		; Check if EAX is empty
+	jne .countThirdC	; If not, go count third corner
+
+	inc ECX			; Increment counter
+	mov EDX, 3		; Store top-right corner in EDX
+
+.countThirdC:			; Count third corner
+	mov EAX, [board + 24]	; Move bottom-left corner into EAX
+	cmp EAX, 0		; Check if EAX is empty
+	jne .countFourthC	; If not, go count third corner
+
+	inc ECX			; Increment counter
+	mov EDX, 7		; Store bottom-left corner in EDX
+
+.countFourthC:			; Count fourth corner
+	mov EAX, [board + 32]	; Move bottom-right corner into EAX
+	cmp EAX, 0		; Check if EAX is empty
+	jne .decision		; If not, go make decision
+
+	inc ECX			; Increment counter
+	mov EDX, 9		; Store top-left corner in EDX
+
+.decision:			; Make decision based upon number of empty spaces
+	cmp ECX, 0		; Check if there are no empty spaces
+	je .fail		; if there are, fail
+	jmp .edx		; Otherwise go to a known empty corner
+
+.fail:				; No empty spaces, fail
+	xor EAX, EAX		; Return a 0
+	jmp .exit
+
+.edx:				; Return EDX
+	mov EAX, EDX		; move EDX into EAX
+	jmp .exit
+
+.exit: ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END tryCorner
+
+tryCenter:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN tryCenter
+
+	mov EAX, [board + 16]	; Move the cneter cell into EAX
+	cmp EAX, 0		; Check and see if the center cell is empty
+	jne .fail		; If not, fail
+
+	mov EAX, 5		; If it is empty, move cell number into EAX
+	jmp .exit		; Exit
+
+.fail:	xor EAX, EAX		; Zero out EAX
+	jmp .exit		; Exit
+
+.exit:	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END tryCenter
+
 exit:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN exit
 	push norm		; push normal character set escape character to stack
 	push f_str		; push format string for printing a string
