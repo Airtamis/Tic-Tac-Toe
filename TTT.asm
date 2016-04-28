@@ -2,7 +2,8 @@
 ; Tic Tac Toe
 ; Plays ye old guessing game with the user
 ; nasm -f elf32 TTT.asm && gcc -m32 TTT.o -o TTT
-
+; DEBUG:
+; nasm -f elf32 -l TTT.lst TTT.asm && gcc -m32 -o TTT TTT.o
 %define SYS_EXIT 1
 %define SYS_READ 3
 %define SYS_WRITE 4
@@ -264,7 +265,7 @@ aivailoop:			; AI versus AI game
 
 	call endgame		; something to update scores, reset board, etc.
 	cmp EAX, 0
-	je exit
+	;je exit
 
 	call switchPlayers	; switch players' symbols
 	jmp aivailoop		; start new game
@@ -448,6 +449,8 @@ printBoard:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN printBoard
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN computer
 computer:
+	call turnInfo
+
 	xor ECX, ECX
 .wait:
 	NOP
@@ -513,7 +516,7 @@ computer:
 	jmp .makeMove
 
 .counterSide:
-	call tryCorner
+	call trySide
 	cmp EAX, 0
 	jne .makeMove
 
@@ -521,7 +524,7 @@ computer:
 	cmp EAX, 0
 	jne .makeMove
 
-	call trySide
+	call tryCorner
 	jmp .makeMove
 
 .makeMove:
@@ -873,7 +876,7 @@ calcWinMove:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN checkWin
 .rl3:
 	mov EAX, [board + 24]	; Bottom left cell
 	cmp EAX, EBX		; If equal to selected symbol
-	jne .found		; free space found previously
+	je .found		; free space found previously
 	
 	cmp EAX, 0		; If not 0 either, must be other symbol
 	jne .notFound		; no winning move found
@@ -2966,6 +2969,15 @@ playAgain:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN playAgain
 	call printf
 	add ESP, 4
 
+	xor ECX, ECX
+
+; Let AI play against itself forever
+;.loop:	
+;	inc ECX
+;	cmp ECX, 2000000000
+;	jne .loop
+;	jmp .exit
+		
 	push input
 	push f_int
 	call scanf
@@ -3024,7 +3036,43 @@ tryCorner:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN tryCorner
 .decision:			; Make decision based upon number of empty spaces
 	cmp ECX, 0		; Check if there are no empty spaces
 	je .fail		; if there are, fail
+
+	cmp ECX, 2		; If ECX to 2
+	je .defense		; We need to be sure that the opponent doesn't have 2 corners
 	jmp .edx		; Otherwise go to a known empty corner
+
+.defense:
+	xor ECX, ECX		; ECX will keep track of how many corners the enemy has
+
+	mov EAX, [board]
+	cmp EAX, [enemySymb]
+	jne .d2
+	inc ECX
+.d2:				; Defense 2
+	mov EAX, [board + 8]
+	cmp EAX, [enemySymb]
+	jne .d3
+	inc ECX
+.d3:				; Defense 3
+	mov EAX, [board + 24]
+	cmp EAX, [enemySymb]
+	jne .d4
+	inc ECX
+.d4:				; Defense Four
+	mov EAX, [board + 32]
+	cmp EAX, [enemySymb]
+	jne .df
+	inc ECX
+.df:				; Defense Final
+	cmp ECX, 2		; See if the opponent had 2 
+	jne .edx		; if they didn't take EDX
+	push EDX		; Save EDX
+	call trySide		; Try a side defensively
+	pop EDX			; Restore edx
+	cmp EAX, 0		; See if side returned 0
+	jne .exit		; If it didn't, return that
+	jmp .edx		; Else return EDX
+	
 
 .fail:				; No empty spaces, fail
 	xor EAX, EAX		; Return a 0
