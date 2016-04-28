@@ -265,7 +265,7 @@ aivailoop:			; AI versus AI game
 
 	call endgame		; something to update scores, reset board, etc.
 	cmp EAX, 0
-	;je exit
+	je exit
 
 	call switchPlayers	; switch players' symbols
 	jmp aivailoop		; start new game
@@ -3104,6 +3104,11 @@ trySide:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN trySide
 	xor EDX, EDX		;holds found move location
 	mov ECX, [input]	;holds last move
 	
+	call .defend		;defend against opponent having adjacent sides
+	cmp EDX, 0
+	jne .decision
+
+
 	;Find last move made
 	cmp ECX, 1
 	je  .1
@@ -3315,8 +3320,68 @@ trySide:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN trySide
 	xor EAX, EAX	;return 0
 	jmp .exit
 
+.defend:
+.defend2:
+	;test to see if 2 is taken
+	mov EAX, [board+4]
+	cmp EAX, [enemySymb]	;if it is taken by enemy,
+	je .defend24		;check to see if adjacent is taken
+
+.defend8:	
+	;test to see if 8 is taken
+	mov EAX, [board+28]	
+	cmp EAX, [enemySymb]	;if it is taken by enemy,
+	je .defend84		;check to see if adjacent is taken
+	
+	ret			;if 2 and 8 are not taken, player cannot have adjacent sides 
+	
+.defend24:
+	;test to see if 4 is also taken
+	mov EAX, [board+12]
+	cmp EAX, [enemySymb]	;does the enemy have the spot?
+	jne .defend26		;if not, check other adjacent side
+	mov EAX, [board]	;is corresponding corner free?
+	cmp EAX, 0
+	jne .defend26		;if not free, next check
+	mov EDX, 1
+	jmp .exit
+
+.defend26:
+	;test if 6 is alse taken
+	mov EAX, [board+20]
+	cmp EAX, [enemySymb]	;does enemy have the spot?
+	jne .exit		;if not, no way we can have adjacent side
+	mov EAX, [board+8]
+	cmp EAX, 0		;is corner free?
+	jne .exit		;if not free, no way we can have adjacent side still; exit
+	mov EDX, 3		;if free, store spot
+	jmp .exit
+
+.defend84:
+	mov EAX, [board+12]	
+	cmp EAX, [enemySymb]	;does enemy have spot?
+	jne .defend86		;if not, check other adjacent side
+	mov EAX, [board+24]
+	cmp EAX, 0
+	jne .exit
+	mov EDX, 7		;if free, store spot
+	jmp .exit
+
+.defend86:
+	;test if 6 is also taken
+	mov EAX, [board+20]
+	cmp EAX, [enemySymb]	;does enemy have spot?
+	jne .exit		;if not, no way we can have adjacent side
+	mov EAX, [board+32]
+	cmp EAX, 0		;is corner free?
+	jne .exit		;if not free, still no way to have adjacent side; exit
+	mov EDX, 9
+	jmp .exit
+	
+
 .exit: ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END trySide
+
 
 exit:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN exit
 	push norm		; push normal character set escape character to stack
