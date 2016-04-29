@@ -1,4 +1,4 @@
-; Jeremy Greenburg and Cody Robertson
+; Jeremy Greennurg and Cody Robertson
 ; Tic Tac Toe
 ; Plays ye old guessing game with the user
 ; nasm -f elf32 TTT.asm && gcc -m32 TTT.o -o TTT
@@ -45,9 +45,9 @@ SECTION .data
 	O:		db "O", 0		; Y
 	E:		db " ", 0		; Space
 	a:		db "a", 0		; a
-	pName:		db "Dave"		; Player/Player1/Computer1 Name
+	pName:		db "Dave", 0		; Player/Player1/Computer1 Name
 			times 100-$+pName db 0	; Reserve enough room in pName for 100 characters total
-	cName:		db "Hal"		; Computer/Player2/Computer2 Name
+	cName:		db "Hal", 0		; Computer/Player2/Computer2 Name
 			times 100-$+cName db 0	; Reserve enough room in cName for 100 characters total
 	m_badSpot:	db "Space already occupied", 10, 0 ; User chose occupied spot in board
 	newline:	db 10, 0		; newline character
@@ -204,8 +204,6 @@ pvailoop:			; Player versus AI loop
 	call prettyPrint	; print original empty board
 
 .gameloop:			; Start of the game loop
-	call turnInfo
-
 	mov EAX, [currentSymb]	;put current symbol in EAX
 	mov EBX, [playSymb]	;put player's symbol in EBX
 	cmp EAX, EBX		;check if player's turn or computer's turn
@@ -239,8 +237,6 @@ aivailoop:			; AI versus AI game
 	call prettyPrint	; print original empty board
 
 .gameloop:
-	call turnInfo
-
 	mov EAX, [currentSymb]	;put current symbol in EAX
 	mov EBX, [playSymb]	;put player's symbol in EBX
 	cmp EAX, EBX		;check if player's turn or computer's turn
@@ -278,7 +274,6 @@ pvploop:			; Player versus player game
 	call prettyPrint	; print original empty board
 
 .gameloop:
-	call turnInfo		; Print who's turn it is
 	mov EAX, [currentSymb]	;put current symbol in EAX
 	mov EBX, [playSymb]	;put player's symbol in EBX
 	cmp EAX, EBX		;check if player's turn or computer's turn
@@ -309,6 +304,8 @@ pvploop:			; Player versus player game
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END main
 
 getInput:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getInput
+	call turnInfo
+
 	push input		; push variable to store input to stack
 	push f_int		; push format string for getting integer input
 	call scanf		; get user's inputted move
@@ -339,8 +336,6 @@ getInput:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN getInput
 	call printf
 	add ESP, 4
 
-	call turnInfo
-	
 	jmp getInput		; Go to top of function
 
 .end:	ret
@@ -378,74 +373,10 @@ setSpot:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN setSpot
 	call printf
 	add ESP, 4
 
-	call turnInfo
-
 	call getInput		; Get input again
 
 .end:	ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END setSpot
-
-printBoard:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN printBoard
-
-	xor ECX, ECX		; set ECX to 0
-.top:	
-	cmp ECX, 10		; check if ECX is finished iterating over array
-	je .end			; if so, return
-
-	push ECX		; push 0 to stack to retain current iteration number
-
-	mov EAX, ECX		; mov 0 into EAX
-	xor EDX, EDX		; set EDX to 0
-	imul EAX, 4		; multiply EAX by for for array offset
-	mov EAX, [board + EAX]	; access current element in array
-	cmp EAX, X_VAL		; if there is an X in the space,
-	je .printX		; print X not 1
-
-	cmp EAX, O_VAL		; if there is an O in the space,
-	je .printO		; print O not 1
-
-	push E			; otherwise, print an empty space; push space string to stack
-	call printf		; print space for current board space
-	add ESP, 4		; adjust stack pointer
-	jmp .bottom		; prepare for next iteration of loop
-
-.printX:
-	push X			; push X character string to stack
-	call printf		; print X for space in board
-	add ESP, 4		; adjust stack pointer
-	jmp .bottom		; prepare for next iteration of loop
-
-.printO:
-	push O			; push O character string to stack
-	call printf		; pirnt O for space in board
-	add ESP, 4		; adjust stack pointer
-	jmp .bottom		; prepare for next iteration of loop
-	
-.bottom:
-	pop ECX			; retrieve current iteration counter from stack
-	inc ECX			; increment counter
-	
-	cmp ECX, 3		; If ECX is 3
-	je .new			; Print a newline
-	cmp ECX, 6		; If ECX is 6
-	je .new			; print a newline
-	cmp ECX, 9		; IF ECX is 9
-	je .new			; Print a newline
-
-	jmp .top		; loop to top
-.new:
-	push ECX		; Save ECX
-
-	push newline		; Push newline charater
-	call printf		; Call printf
-	add ESP, 4		; Adjust stack
-
-	pop ECX			; Get ECX back
-	jmp .top
-
-.end:
-	ret
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END printBoard
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN computer
 computer:
@@ -2762,11 +2693,10 @@ drawBorders:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN drawBorders
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END drawBorders 
 
 turnInfo:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN pvaiTurnInfo
-
 	mov EAX, [currentSymb]
-	cmp EAX, [playSymb]
-	je .playerTurn
-	jmp .compTurn
+	cmp EAX, [compSymb]
+	je .compTurn
+	jmp .playerTurn
 
 .playerTurn:			; It is the player's turn to make a move
 	push pName
@@ -2796,13 +2726,17 @@ turnInfo:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN pvaiTurnInfo
 	push m_playerMove
 	call printf
 	add ESP, 4
-
 	jmp .exit
 
 .comp:
 	push m_compMove
 	call printf
 	add ESP, 4
+
+	push newline
+	call printf
+	add ESP, 4
+	
 	jmp .exit
 
 .exit:	ret
