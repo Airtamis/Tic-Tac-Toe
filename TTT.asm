@@ -1,4 +1,4 @@
-; Jeremy Greennurg and Cody Robertson
+; Jeremy Greenburg and Cody Robertson
 ; Tic Tac Toe
 ; Plays ye old guessing game with the user
 ; nasm -f elf32 TTT.asm && gcc -m32 TTT.o -o TTT
@@ -2733,7 +2733,7 @@ turnInfo:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN pvaiTurnInfo
 	call printf
 	add ESP, 4
 
-	push newline
+	push newline		; Force buffer flush by printing newline
 	call printf
 	add ESP, 4
 	
