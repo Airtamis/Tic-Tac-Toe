@@ -413,6 +413,14 @@ computer:
 ;if no winning moves, continue to main algorithm to 
 .findMove:
 	;main algorithm should go here
+	call defend ;protects against adjacent sides
+	cmp EAX, 0
+	jne .makeMove
+
+	call cornerSide ;protects against corner and opposite sides
+	cmp EAX, 0
+	jne .makeMove	
+
 	mov EAX, [input]
 	cmp EAX, 1
 	je .counterCorner
@@ -447,11 +455,27 @@ computer:
 	jmp .makeMove
 
 .counterSide:
+	mov EAX, [firstTurn]
+	cmp EAX, 1
+	je .specialSide
+
 	call trySide
 	cmp EAX, 0
 	jne .makeMove
 
 	call tryCenter
+	cmp EAX, 0
+	jne .makeMove
+
+	call tryCorner
+	jmp .makeMove
+
+.specialSide:
+	call tryCenter
+	cmp EAX, 0
+	jne .makeMove
+
+	call trySide
 	cmp EAX, 0
 	jne .makeMove
 
@@ -3019,6 +3043,140 @@ tryCorner:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN tryCorner
 .exit: ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END tryCorner
 
+cornerSide:
+	xor EDX, EDX
+;check sides
+.2:
+	;check top
+	mov EAX, [board+4]
+	cmp EAX, [enemySymb]
+	je .27			;check to see if opponent has close corner and side
+.4:
+	;check left
+	mov EAX, [board+12]
+	cmp EAX, [enemySymb]	
+	je .43			;check to see if opponent has close corner and side
+.6:
+	;check right
+	mov EAX, [board+20]
+	cmp EAX, [enemySymb]
+	je .61
+.8:	
+	;check bottom
+	mov EAX, [board+28]
+	cmp EAX, [enemySymb]
+	je .81
+
+	jmp .fail
+
+.27:
+	;is bottom left also taken?
+	mov EAX, [board+24]
+	cmp EAX, [enemySymb]
+	jne .29			;if not, next check
+	mov EAX, [board]	;check if empty spaces between
+	cmp EAX, 0
+	jne .29
+	mov EAX, [board+12]
+	cmp EAX, 0
+	jne .29
+	mov EDX, 4		;choose side between them
+	jmp .success
+.29:
+	;is bottom right also taken?
+	mov EAX, [board+32]
+	cmp EAX, [enemySymb]
+	jne .4			
+	mov EAX, [board+20]	;check if empty spaces between
+	cmp EAX, 0
+	jne .4
+	mov EAX, [board+8]
+	cmp EAX, 0
+	jne .4
+	mov EDX, 6		;choose side between them
+	jmp .success
+.43:
+	;is top right also taken?
+	mov EAX, [board+8]
+	cmp EAX, [enemySymb]
+	jne .49
+	mov EAX, [board]
+	cmp EAX, 0
+	jne .49
+	mov EAX, [board+4]
+	cmp EAX, 0
+	jne .49
+	mov EDX, 2
+	jmp .success	
+.49:	;is bottom right also taken?
+	mov EAX, [board+32]
+	cmp EAX, [enemySymb]
+	jne .6
+	mov EAX, [board+24]
+	cmp EAX, 0
+	jne .6
+	mov EAX, [board+28]
+	cmp EAX, 0
+	jne .6
+	mov EDX, 8
+	jmp .success
+.61:	;is top left also taken?
+	mov EAX, [board]
+	cmp EAX, [enemySymb]
+	jne .67
+	mov EAX, [board+4]
+	cmp EAX, 0
+	jne .67
+	mov EAX, [board+8]
+	cmp EAX, 0
+	jne .67
+	mov EDX, 2
+	jmp .success
+.67:	;is bottom left also taken?
+	mov EAX, [board+24]
+	cmp EAX, [enemySymb]
+	jne .8
+	mov EAX, [board+28]
+	cmp EAX, 0
+	jne .8
+	mov EAX, [board+32]
+	cmp EAX, 0
+	jne .8
+	mov EDX, 8
+	jmp .success
+.81:	;is top left also taken?
+	mov EAX, [board]
+	cmp EAX, [enemySymb]
+	jne .83
+	mov EAX, [board+12]
+	cmp EAX, 0
+	jne .83
+	mov EAX, [board+24]
+	cmp EAX, 0
+	jne .83
+	mov EDX, 4
+	jmp .success
+.83:	;is top right also taken?
+	mov EAX, [board+8]
+	cmp EAX, [enemySymb]
+	jne .fail
+	mov EAX, [board+20]
+	cmp EAX, 0
+	jne .fail
+	mov EAX, [board+32]
+	cmp EAX, 0
+	jne .fail
+	mov EDX, 6
+	jmp .success
+.fail:
+	xor EAX, EAX	;return 0
+	jmp .exit
+.success:
+	mov EAX, EDX	;return move
+	jmp .exit
+.exit:
+	ret
+
 tryCenter:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN tryCenter
 
 	mov EAX, [board + 16]	; Move the center cell into EAX
@@ -3038,10 +3196,6 @@ trySide:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN trySide
 	xor EDX, EDX		;holds found move location
 	mov ECX, [input]	;holds last move
 	
-	call .defend		;defend against opponent having adjacent sides
-	cmp EDX, 0
-	jne .decision
-
 
 	;Find last move made
 	cmp ECX, 1
@@ -3254,7 +3408,10 @@ trySide:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN trySide
 	xor EAX, EAX	;return 0
 	jmp .exit
 
-.defend:
+.exit:
+	ret
+
+defend:
 .defend2:
 	;test to see if 2 is taken
 	mov EAX, [board+4]
@@ -3267,7 +3424,7 @@ trySide:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN trySide
 	cmp EAX, [enemySymb]	;if it is taken by enemy,
 	je .defend84		;check to see if adjacent is taken
 	
-	ret			;if 2 and 8 are not taken, player cannot have adjacent sides 
+	jmp .fail		;if 2 and 8 are not taken, player cannot have adjacent sides 
 	
 .defend24:
 	;test to see if 4 is also taken
@@ -3278,18 +3435,18 @@ trySide:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN trySide
 	cmp EAX, 0
 	jne .defend26		;if not free, next check
 	mov EDX, 1
-	jmp .exit
+	jmp .decision
 
 .defend26:
 	;test if 6 is alse taken
 	mov EAX, [board+20]
 	cmp EAX, [enemySymb]	;does enemy have the spot?
-	jne .exit		;if not, no way we can have adjacent side
+	jne .fail		;if not, no way we can have adjacent side
 	mov EAX, [board+8]
 	cmp EAX, 0		;is corner free?
-	jne .exit		;if not free, no way we can have adjacent side still; exit
+	jne .fail		;if not free, no way we can have adjacent side still; exit
 	mov EDX, 3		;if free, store spot
-	jmp .exit
+	jmp .decision
 
 .defend84:
 	mov EAX, [board+12]	
@@ -3297,21 +3454,28 @@ trySide:;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BEGIN trySide
 	jne .defend86		;if not, check other adjacent side
 	mov EAX, [board+24]
 	cmp EAX, 0
-	jne .exit
+	jne .fail
 	mov EDX, 7		;if free, store spot
-	jmp .exit
+	jmp .decision
 
 .defend86:
 	;test if 6 is also taken
 	mov EAX, [board+20]
 	cmp EAX, [enemySymb]	;does enemy have spot?
-	jne .exit		;if not, no way we can have adjacent side
+	jne .fail		;if not, no way we can have adjacent side
 	mov EAX, [board+32]
 	cmp EAX, 0		;is corner free?
-	jne .exit		;if not free, still no way to have adjacent side; exit
+	jne .fail		;if not free, still no way to have adjacent side; exit
 	mov EDX, 9
-	jmp .exit
+	jmp .decision
 	
+.decision:
+	mov EAX, EDX
+	jmp .exit
+
+.fail:
+	xor EAX, EAX
+	jmp .exit
 
 .exit: ret
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; END trySide
